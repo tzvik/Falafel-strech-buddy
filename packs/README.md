@@ -50,7 +50,8 @@ The face sits around (56, 65), shoulders at y 72, hips at (44, 124) and (66, 124
 |---|---|
 | `eyes` | `dots` (default), `googly` |
 | `mouth` | `smile` (default), `lips` |
-| `hands` | `mitt` (default), `glove` (white cartoon gloves) |
+| `hands` | `mitt` (default), `glove` (white cartoon gloves), `felt` (puppet mitten with a thumb) |
+| `limbColor` | hex color for the arms instead of black ink, e.g. `"#D6A25A"` for felt puppet arms |
 | `mouth` also | `beak` (with a wattle, like the turkey) |
 | `back` | extra XAML drawn *behind* the body (tail feathers, leaves) |
 | `face` | `false` to hide the drawn face (for sticker images that have one) |

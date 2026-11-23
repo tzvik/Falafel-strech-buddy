@@ -230,6 +230,10 @@ foreach ($pj in Get-ChildItem (Join-Path $dir 'packs') -Filter pack.json -Recurs
     $e = @{ kit = $kitId; id = "pack:${kitId}:$n"   # stable id, so adding packs never changes your pick
             kitNames = $pk.names; names = $ch.names; ax = [int]$ch.ax
             eyes = $ch.eyes; hands = $ch.hands; mouth = $ch.mouth; noFace = ($ch.face -eq $false) }
+    if ("$($ch.limbColor)" -match '^#[0-9A-Fa-f]{6}$') {   # felt-colored arms; edge = same color, darker
+      $e.limb = $ch.limbColor
+      $rgb = [Convert]::ToInt32($ch.limbColor.Substring(1), 16)
+      $e.limbEdge = '#{0:X2}{1:X2}{2:X2}' -f [int](($rgb -shr 16 -band 255) * .75), [int](($rgb -shr 8 -band 255) * .75), [int](($rgb -band 255) * .75) }
     if ($ch.image) {   # sticker PNG/JPG as the body - must live inside the pack folder
       $file = [IO.Path]::GetFullPath((Join-Path $pj.DirectoryName $ch.image))
       if (-not $file.StartsWith($pj.DirectoryName, 'OrdinalIgnoreCase') -or $file -notmatch '\.(png|jpe?g)$' -or -not (Test-Path $file)) { continue }
@@ -285,20 +289,25 @@ function New-Noodle($p, $who) {
     "<Path Data='M 44,77 Q 56,90 69,75 Q 66,80 56,81 Q 49,81 44,77 Z' Fill='#D7263D' Stroke='$INK' StrokeThickness='1.8' StrokeLineJoin='Round'/>" }
     else { "<Path Data='M 48,75 L 64,75 Q 63,86 56,86 Q 49,86 48,75 Z' Fill='$INK'/><Path Data='M 51.5,82 Q 56,78.5 60.5,82 Q 58.5,85 56,85 Q 53.5,85 51.5,82 Z' Fill='#E86A6A'/>" }
   $faceVis = if ($who.noFace) { 'Collapsed' } else { 'Visible' }
-  $handX = { param($hx) if ($who.hands -eq 'glove') {
+  $handX = { param($hx) if ($who.hands -eq 'felt') {   # puppet-style felt mitten with a thumb
+      $f = if ($who.limb) { $who.limb } else { '#D9A55E' }; $fe = if ($who.limbEdge) { $who.limbEdge } else { '#A87634' }
+      "<Ellipse Canvas.Left='$($hx-9)' Canvas.Top='98' Width='18' Height='19' Fill='$f' Stroke='$fe' StrokeThickness='2'/><Ellipse Canvas.Left='$($hx+4)' Canvas.Top='99' Width='8' Height='11' Fill='$f' Stroke='$fe' StrokeThickness='2'/><Line X1='$($hx-4)' Y1='108' X2='$($hx-4)' Y2='114' Stroke='$fe' StrokeThickness='1.3'/><Line X1='$($hx)' Y1='108' X2='$($hx)' Y2='115' Stroke='$fe' StrokeThickness='1.3'/>" }
+    elseif ($who.hands -eq 'glove') {
       "<Ellipse Canvas.Left='$($hx-8)' Canvas.Top='99' Width='16' Height='15' Fill='White' Stroke='$INK' StrokeThickness='2.5'/><Line X1='$($hx-5)' Y1='101' X2='$($hx+5)' Y2='101' Stroke='$INK' StrokeThickness='1.5'/>" }
     else { "<Ellipse Canvas.Left='$($hx-6)' Canvas.Top='100' Width='12' Height='12' Fill='$INK'/>" } }
-  $seg ={ param($x1,$y1,$x2,$y2,$part)   # part: 'w' white underlay, 'i' ink
+  $seg = { param($x1,$y1,$x2,$y2,$part)   # part: 'w' white underlay, 'i' ink, 'a' arm (ink, or felt if the character has limbColor)
     if ($part -eq 'w') { "<Line X1='$x1' Y1='$y1' X2='$x2' Y2='$y2' Stroke='White' StrokeThickness='17' StrokeStartLineCap='Round' StrokeEndLineCap='Round'/>" }
+    elseif ($part -eq 'a' -and $who.limb) {   # felt arm: darker edge + color
+      "<Line X1='$x1' Y1='$y1' X2='$x2' Y2='$y2' Stroke='$($who.limbEdge)' StrokeThickness='11' StrokeStartLineCap='Round' StrokeEndLineCap='Round'/><Line X1='$x1' Y1='$y1' X2='$x2' Y2='$y2' Stroke='$($who.limb)' StrokeThickness='7.5' StrokeStartLineCap='Round' StrokeEndLineCap='Round'/>" }
     else { "<Line X1='$x1' Y1='$y1' X2='$x2' Y2='$y2' Stroke='$INK' StrokeThickness='8' StrokeStartLineCap='Round' StrokeEndLineCap='Round'/>" } }
   $arm = { param($s, $sx, $ex, $hx)   # side L/R, shoulder x, elbow x, hand x  (y: 72 -> 89 -> 106)
     $glass = if ($s -eq 'R') { "<Canvas x:Name='${p}Glass' Visibility='Collapsed'><Rectangle Canvas.Left='$($hx-4)' Canvas.Top='96' Width='15' Height='20' RadiusX='2' RadiusY='2' Fill='#E8F6FD' Stroke='$INK' StrokeThickness='2'/><Rectangle Canvas.Left='$($hx-2)' Canvas.Top='104' Width='11' Height='10' Fill='#8FCDEE'/></Canvas>" } else { '' }
     "<Canvas><Canvas.RenderTransform><RotateTransform x:Name='${p}${s}ArmU' CenterX='$sx' CenterY='72'/></Canvas.RenderTransform>
       $(& $seg $sx 72 $ex 89 'w')
       <Canvas><Canvas.RenderTransform><RotateTransform x:Name='${p}${s}ArmF' CenterX='$ex' CenterY='89'/></Canvas.RenderTransform>
-        $(& $seg $ex 89 $hx 106 'w') $(& $seg $ex 89 $hx 106 'i')
+        $(& $seg $ex 89 $hx 106 'w') $(& $seg $ex 89 $hx 106 'a')
         $(& $handX $hx)$glass</Canvas>
-      $(& $seg $sx 72 $ex 89 'i')</Canvas>" }
+      $(& $seg $sx 72 $ex 89 'a')</Canvas>" }
   $leg = { param($s, $hx, $kx, $fx, $dir)   # hip x, knee x, foot x; y: 124 -> 138 -> 151 ; dir = shoe points out
     "<Canvas><Canvas.RenderTransform><RotateTransform x:Name='${p}${s}LegU' CenterX='$hx' CenterY='124'/></Canvas.RenderTransform>
       $(& $seg $hx 124 $kx 138 'w')
