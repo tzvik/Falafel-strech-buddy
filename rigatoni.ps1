@@ -414,9 +414,28 @@ if ($Gallery) {
     "<Border x:Name='Tile$($script:nTiles)' Tag='$tag' Width='122' Height='170' Margin='4' Padding='5' CornerRadius='16' Background='#F4F1EC' BorderThickness='3' Cursor='Hand'>
       <StackPanel><Border Height='120' Padding='4'>$art</Border>
       <TextBlock Text='$(& $esc $name)' TextAlignment='Center' TextWrapping='Wrap' FontSize='12.5' FontWeight='SemiBold' Foreground='#1A1A1A' Margin='0,3,0,0'/></StackPanel></Border>" }
-  $dice = { param($c) "<Viewbox><TextBlock Text='?' FontSize='90' FontWeight='Bold' Foreground='$c'/></Viewbox>" }
+  # "random" tile art: two chunky crossing shuffle arrows (ink + color), white gap where they cross
+  $dice = { param($c) "<Viewbox Margin='10'><Canvas Width='104' Height='84'>
+    <Path Data='M 10,64 L 26,64 C 48,64 52,22 74,22 L 82,22' Stroke='$INK' StrokeThickness='11' StrokeStartLineCap='Round' StrokeEndLineCap='Round'/>
+    <Path Data='M 80,8 L 96,22 L 80,36 Z' Fill='$INK' Stroke='$INK' StrokeThickness='6' StrokeLineJoin='Round'/>
+    <Path Data='M 10,22 L 26,22 C 48,22 52,64 74,64 L 82,64' Stroke='White' StrokeThickness='19' StrokeStartLineCap='Round' StrokeEndLineCap='Round'/>
+    <Path Data='M 10,22 L 26,22 C 48,22 52,64 74,64 L 82,64' Stroke='$c' StrokeThickness='11' StrokeStartLineCap='Round' StrokeEndLineCap='Round'/>
+    <Path Data='M 80,50 L 96,64 L 80,78 Z' Fill='$c' Stroke='$c' StrokeThickness='6' StrokeLineJoin='Round'/>
+  </Canvas></Viewbox>" }
   $section = { param($title, $row) "<StackPanel Margin='0,8,18,0'><TextBlock Text='$(& $esc $title)' FontSize='15' FontWeight='Bold' Foreground='#1A1A1A' Margin='4,0,0,2'/><WrapPanel>$row</WrapPanel></StackPanel>" }
-  $body = & $section ' ' (Tile 'random' (& $dice '#D9541E') $L.ui.random)
+  # "feeling lucky" (anyone at all) = two tumbling dice; per-kit random = shuffle arrows
+  $pips = { param($pts) ($pts | % { "<Ellipse Canvas.Left='$($_[0]-5)' Canvas.Top='$($_[1]-5)' Width='10' Height='10' Fill='$INK'/>" }) -join '' }
+  $lucky = "<Viewbox Margin='8'><Canvas Width='110' Height='110'>
+    <Canvas><Canvas.RenderTransform><RotateTransform x:Name='Dice1' Angle='-22' CenterX='34' CenterY='36'/></Canvas.RenderTransform>
+      <Rectangle Canvas.Left='8' Canvas.Top='10' Width='52' Height='52' RadiusX='10' RadiusY='10' Fill='#F3F1F7' Stroke='$INK' StrokeThickness='5'/>
+      <Rectangle Canvas.Left='34' Canvas.Top='13' Width='23' Height='46' Fill='#C4D5EE'/>
+      $(& $pips (@(24,27),@(44,45)))</Canvas>
+    <Canvas><Canvas.RenderTransform><RotateTransform x:Name='Dice2' Angle='0' CenterX='74' CenterY='76'/></Canvas.RenderTransform>
+      <Rectangle Canvas.Left='48' Canvas.Top='50' Width='52' Height='52' RadiusX='10' RadiusY='10' Fill='#F3F1F7' Stroke='$INK' StrokeThickness='5'/>
+      <Rectangle Canvas.Left='74' Canvas.Top='53' Width='23' Height='46' Fill='#C4D5EE'/>
+      $(& $pips (@(63,65),@(85,65),@(63,87),@(85,87)))</Canvas>
+  </Canvas></Viewbox>"
+  $body = & $section ' ' (Tile 'random' $lucky $L.ui.random)
   $first = 'streetfood', 'hanukkah', 'thanksgiving'   # default kit first
   $kits = @($first) + @($cast | % { $_.kit } | Select-Object -Unique | ? { $_ -notin $first })
   foreach ($kit in $kits) {     # one section per kit
@@ -444,7 +463,8 @@ if ($Gallery) {
   function Show-Sel { foreach ($t in $tileEls) { $t.BorderBrush = if ($t.Tag -eq $script:sel) { '#D9541E' } else { 'Transparent' } } }
   foreach ($t in $tileEls) { $t.Add_MouseLeftButtonUp({ param($s) $script:sel = $s.Tag; Save-State @{ who = $s.Tag }; Show-Sel }) }
   Show-Sel
-  $win.Add_Loaded({ for ($i = 0; $i -lt $cast.Count; $i++) { Alive "G$i"; Wave "G$i" } })
+  $win.Add_Loaded({ for ($i = 0; $i -lt $cast.Count; $i++) { Alive "G$i"; Wave "G$i" }
+    M Dice1 A @(-22,-22,-8,-30,-22) 2.6; M Dice2 A @(0,0,12,-6,0) 2.6 })   # dice give a little shake now and then
   if ($Snap) { Start-Snaps @(1.0) }
   $win.ShowDialog() | Out-Null
   return
