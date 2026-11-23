@@ -136,13 +136,19 @@ function Play-Sound($kind) {
     # a real recording (sounds\<kind>.mp3) wins over the synthesized .wav; played quietly and cut short
     $mp3 = Join-Path $dir "sounds\$kind.mp3"
     $file = if (Test-Path $mp3) { $mp3 } else { Get-Sound $kind }
+    # per-sound start / length / volume (sounds\sounds.json) - so long recordings play just their best bit
+    $cfg = $null; try { $cfg = (Get-Content (Join-Path $dir 'sounds\sounds.json') -Raw | ConvertFrom-Json).$kind } catch {}
+    $script:sndLen = if ($cfg.len) { [double]$cfg.len } else { 2.5 }
+    $script:sndVol = if ($cfg.vol) { [double]$cfg.vol } else { 0.35 }
     $script:player = New-Object System.Windows.Media.MediaPlayer
-    $script:player.Open([Uri]$file); $script:player.Volume = 0.35; $script:player.Play()
-    $script:fade = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval = [TimeSpan]::FromMilliseconds(100) }
+    $script:player.Open([Uri]$file); $script:player.Volume = $script:sndVol
+    if ($cfg.start) { $script:player.Position = [TimeSpan]::FromSeconds([double]$cfg.start) }
+    $script:player.Play()
+    $script:fade = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval = [TimeSpan]::FromMilliseconds(50) }
     $script:fadeT0 = Get-Date
     $script:fade.Add_Tick({ $t = ((Get-Date) - $script:fadeT0).TotalSeconds
-      if ($t -gt 2.5) { $script:player.Volume = [math]::Max(0, 0.35 - ($t - 2.5) * 0.7) }   # fade out after 2.5 s
-      if ($t -gt 3.0) { $script:player.Stop(); $script:fade.Stop() } })
+      if ($t -gt $script:sndLen) { $script:player.Volume = [math]::Max(0, $script:sndVol * (1 - ($t - $script:sndLen) / 0.4)) }   # 0.4 s fade
+      if ($t -gt $script:sndLen + 0.4) { $script:player.Stop(); $script:fade.Stop() } })
     $script:fade.Start()
   } catch {} }
 if ($MakeSounds) {

@@ -11,8 +11,9 @@ eyes while you sit at the computer. Animated characters act out each exercise, s
 
 - About **every 2 hours, at a slightly random time** (adjustable: ~1h / 1.5h / 2h / 3h). Not a nag.
 - **Choose your reminder types**: Stretches, Water, Get up & move, Eyes & breathing, each Often / Sometimes / Off.
-- **Subtle sounds** that match the reminder (water drops, a stretchy glide, a soft bell; festive kits have their own
-  little tune). One click to mute.
+- **Subtle sounds** that match the reminder: water pouring, a gentle creak for stretches, an "ahh" for eye rest
+  (recordings from Pixabay, see [sounds/CREDITS.md](sounds/CREDITS.md)); festive kits play their own little tune when
+  you finish. One click to mute.
 - A short toast ("It's time to **stretch!**"), then a card with one exercise. The character demos it live.
 - Little orange **arrows** show which way to move.
 - Finish one and you get a green "Nice! That's 3 today", a happy character, and now and then a burst of **confetti**.
@@ -68,7 +69,7 @@ Build the installer yourself with `installer\build.ps1` (uses IExpress, built in
 | `tray.ps1` | tray icon, timer and settings menu |
 | `i18n.json` | all text (English, Hebrew) |
 | `packs\` | extra character kits |
-| `sounds\` | the little alert sounds (synthesized by `rigatoni.ps1 -MakeSounds`) |
+| `sounds\` | alert sounds: Pixabay recordings (`.mp3`, start/length/volume in `sounds.json`) + synthesized chimes (`.wav`) |
 | `installer\` | builds `StretchBuddy-Setup.exe` |
 | `state.json` | your settings (created on first run, not in git) |
 
