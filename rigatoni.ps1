@@ -21,7 +21,8 @@ $exercises = @(
   @{ k='stand';    s=60; w='stand' },   @{ k='wrists';  s=30; w='stretch' }, @{ k='drink2';    s=20;  w='drink' },
   @{ k='neck';     s=40; w='stretch' }, @{ k='walk';    s=120; w='walk' },  @{ k='twist';     s=30;  w='stretch' },
   @{ k='drink';    s=20; w='drink' },   @{ k='breathe'; s=40; w='breathe' }, @{ k='calves';    s=30;  w='move' },
-  @{ k='chin';     s=30; w='stretch' }, @{ k='drink2';  s=20; w='drink' },  @{ k='shoulders'; s=30;  w='stretch' }
+  @{ k='chin';     s=30; w='stretch' }, @{ k='drink2';  s=20; w='drink' },  @{ k='shoulders'; s=30;  w='stretch' },
+  @{ k='shake';    s=15; w='stretch' }
 )
 
 # --- state: next exercise, done-today counter, dragged position, language, character ---
@@ -36,7 +37,7 @@ if (-not $I.($st.lang)) { $st.lang = 'en' }
 # Reminder types (tray > Reminder types): weight 2 = often, 1 = sometimes, 0 = off.
 # Each popup picks a type by weight (never the same type twice in a row if others are on),
 # then the next exercise of that type in turn.
-$cats = [ordered]@{ stretch = 'thoracic','chin','neck','wrists','twist','shoulders'; water = 'drink','drink2'
+$cats = [ordered]@{ stretch = 'thoracic','shake','chin','neck','wrists','twist','shoulders'; water = 'drink','drink2'
                     move = 'stand','walk','calves'; eyes = 'eyes','breathe' }
 $weights = @{ stretch = 2; water = 2; move = 1; eyes = 1 }
 if ($j -and $j.types) { foreach ($c in @($cats.Keys)) { if ($null -ne $j.types.$c) { $weights[$c] = [int]$j.types.$c } } }
@@ -131,7 +132,19 @@ function Get-Sound($kind) {
 $script:muted = [bool]($j -and $j.mute)
 function Play-Sound($kind) {
   if ($Snap -or $script:muted) { return }
-  try { $script:player = New-Object Media.SoundPlayer (Get-Sound $kind); $script:player.Play() } catch {} }
+  try {
+    # a real recording (sounds\<kind>.mp3) wins over the synthesized .wav; played quietly and cut short
+    $mp3 = Join-Path $dir "sounds\$kind.mp3"
+    $file = if (Test-Path $mp3) { $mp3 } else { Get-Sound $kind }
+    $script:player = New-Object System.Windows.Media.MediaPlayer
+    $script:player.Open([Uri]$file); $script:player.Volume = 0.35; $script:player.Play()
+    $script:fade = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval = [TimeSpan]::FromMilliseconds(100) }
+    $script:fadeT0 = Get-Date
+    $script:fade.Add_Tick({ $t = ((Get-Date) - $script:fadeT0).TotalSeconds
+      if ($t -gt 2.5) { $script:player.Volume = [math]::Max(0, 0.35 - ($t - 2.5) * 0.7) }   # fade out after 2.5 s
+      if ($t -gt 3.0) { $script:player.Stop(); $script:fade.Stop() } })
+    $script:fade.Start()
+  } catch {} }
 if ($MakeSounds) {
   foreach ($k in $recipes.Keys) {   # build + self-check: a silent file means the writer is broken
     $b = [IO.File]::ReadAllBytes((Get-Sound $k)); $loud = $false
@@ -433,6 +446,8 @@ $moves = @{
                 M CLArmU A @(0,40,40,0,0,0,0) 5; M CRArmU A @(0,0,0,0,-40,-40,0) 5 }                                             # turn left, then right
   breathe   = { Sit C; M CUpS SX @(1,1.06,1.06,1) 5; M CUpS SY @(1,1.05,1.05,1) 5
                 M CLArmU A @(0,25,25,0) 5; M CRArmU A @(0,-25,-25,0) 5 }                                                          # in for 4, out for 6
+  shake     = { Sit C; M CLArmU A @(20,20) 1; M CRArmU A @(-20,-20) 1                                                       # arms hang loose
+                M CLArmF A @(-22,22,-22) .22; M CRArmF A @(22,-22,22) .22; M CArmsT Y @(0,-2,0) .22 }                         # quick gentle shake
   calves    = { M CRigT Y @(0,-9,-9,0,0) 1.6; M CLLegF A @(0,-8,-8,0,0) 1.6; M CRLegF A @(0,8,8,0,0) 1.6 }                    # up on toes, down
 }
 
@@ -681,7 +696,9 @@ function Format-Secs($s) { if ($s -ge 60) { '{0}:{1:00}' -f [math]::Floor($s/60)
 function Set-Lang($code) {
   $script:L = $I.$code
   $e = $L.ex.($ex.k)
-  $win.FlowDirection = if ($L.rtl) { 'RightToLeft' } else { 'LeftToRight' }  $TimeTo.Text = $L.ui.timeTo; $Word.Text = $L.ui.($ex.w); $Sub.Text = $L.ui.sub -f (Get-Name $whoIdx $L)
+  $win.FlowDirection = if ($L.rtl) { 'RightToLeft' } else { 'LeftToRight' }  $TimeTo.Text = $L.ui.timeTo; $Word.Text = $L.ui.($ex.w)
+  $TimeTo.Visibility = if ($ex.w -eq 'eyes') { 'Collapsed' } else { 'Visible' }   # the eye-break title stands on its own
+  $Sub.Text = $L.ui.sub -f (Get-Name $whoIdx $L)
   $Title.Text = $e.t; $Desc.Text = $e.d; $Amount.Text = $e.a; $HowText.Text = $e.h; $How.Text = $L.ui.howto
   # tip from the SAME type as this card (one topic per reminder)
   $myCat = @($cats.Keys | ? { $cats[$_] -contains $ex.k })[0]

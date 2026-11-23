@@ -5,7 +5,7 @@
     "ui": {
       "timeTo": "It's time to",
       "stretch": "stretch!", "drink": "drink!", "stand": "stand!", "walk": "walk!",
-      "eyes": "rest your eyes!", "breathe": "breathe!", "move": "move!",
+      "eyes": "Eye break!", "breathe": "breathe!", "move": "move!",
       "sub": "{0}: quick one while you're here.",
       "today": "{0} today",
       "start": "Start", "snooze": "Snooze", "done": "Done", "stop": "Stop",
@@ -79,6 +79,8 @@
                      "h": "1. Sit tall, feet flat.  2. Hand on the opposite knee.  3. Breathe in tall, breathe out and turn.  4. Hold 15s, switch sides. Never force it." },
       "breathe":   { "t": "Deep breaths", "d": "Sit tall, breathe in for 4, out for 6.", "a": "5 breaths",
                      "h": "Drop your shoulders and relax your jaw. Slow belly breaths calm you and reset your posture." },
+      "shake":     { "t": "Shake out your hands", "d": "Let your hands hang loose and shake them gently, like flicking water off your fingers.", "a": "15 sec",
+                     "h": "1. Drop your arms by your sides.  2. Relax your wrists and fingers.  3. Shake gently for 15 seconds.  4. Finish by wiggling your fingers." },
       "calves":    { "t": "Calf raises", "d": "Stand up, rise onto your toes, lower slowly.", "a": "15 reps",
                      "h": "Hold the desk for balance. Gets the blood moving in your legs after a long sit." }
     }
@@ -89,7 +91,7 @@
     "ui": {
       "timeTo": "הגיע הזמן",
       "stretch": "להתמתח!", "drink": "לשתות!", "stand": "לקום!", "walk": "ללכת!",
-      "eyes": "לנוח לעיניים!", "breathe": "לנשום!", "move": "לזוז!",
+      "eyes": "מנוחה לעיניים!", "breathe": "לנשום!", "move": "לזוז!",
       "sub": "{0}: רגע קצר, בין לבין.",
       "today": "{0} היום",
       "start": "התחלה", "snooze": "נודניק", "done": "סיימתי", "stop": "עצירה",
@@ -163,6 +165,8 @@
                      "h": "1. לשבת זקוף, כפות רגליים על הרצפה.  2. יד על הברך הנגדית.  3. בשאיפה להתארך, בנשיפה להסתובב.  4. להחזיק 15 שנ׳ ולהחליף צד. בלי לכפות." },
       "breathe":   { "t": "נשימות עמוקות", "d": "לשבת זקוף, לשאוף 4 שניות ולנשוף 6.", "a": "5 נשימות",
                      "h": "להוריד את הכתפיים ולשחרר את הלסת. נשימות בטן איטיות מרגיעות ומאפסות את היציבה." },
+      "shake":     { "t": "ניעור ידיים", "d": "להוריד ידיים רפויות ולנער אותן בעדינות, כמו לנער מים מהאצבעות.", "a": "15 שנ׳",
+                     "h": "1. להוריד את הידיים לצדי הגוף.  2. לשחרר את שורש כף היד והאצבעות.  3. לנער בעדינות 15 שניות.  4. לסיים בהנעת אצבעות." },
       "calves":    { "t": "עליות על בהונות", "d": "לקום, לעלות על קצות האצבעות ולרדת לאט.", "a": "15 חזרות",
                      "h": "אפשר להחזיק את השולחן לשיווי משקל. מזרים דם לרגליים אחרי ישיבה ארוכה." }
     }
