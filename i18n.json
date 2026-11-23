@@ -30,16 +30,30 @@
              "Fala the Falafel", "Shawi the Shawarma",
              "Sufi the Sufganiya", "Dov the Dreidel", "Mena the Menorah", "Neri the Candle",
              "Pumpi the Pumpkin", "Gobbles the Turkey", "Cornelius the Corn", "Patty the Pie"],
-    "tips": [
-      "Screen top at eye level, about an arm's length away.",
-      "Feet flat on the floor, knees about level with your hips.",
-      "Keep water on your desk. Sip whenever you notice it.",
-      "Elbows near 90°, shoulders relaxed, not shrugged.",
-      "Blink! We blink far less while staring at screens.",
-      "Take calls standing up, or walk while you talk.",
-      "Sit back so the chair supports your lower back.",
-      "Pale yellow means well hydrated. Have a glass now?"
-    ],
+    "tips": {
+      "stretch": [
+        "Screen top at eye level, about an arm's length away.",
+        "Feet flat on the floor, knees about level with your hips.",
+        "Elbows near 90°, shoulders relaxed, not shrugged.",
+        "Sit back so the chair supports your lower back.",
+        "Move slowly and gently. A stretch should never hurt."
+      ],
+      "water": [
+        "Keep water on your desk. Sip whenever you notice it.",
+        "Pale yellow means well hydrated.",
+        "A bottle you can see is a bottle you'll drink."
+      ],
+      "eyes": [
+        "We blink far less while staring at screens. Blink slowly a few times.",
+        "Match your screen brightness to the room.",
+        "Look out a window if you can: distance rests your eyes best."
+      ],
+      "move": [
+        "Take calls standing up, or walk while you talk.",
+        "A few short walks beat one long one.",
+        "If there are stairs, go up one floor and back down."
+      ]
+    },
     "ex": {
       "thoracic":  { "t": "Upper-back stretch", "d": "Hands behind your head, lean your upper back over the top of the chair and look up.", "a": "10 reps",
                      "h": "1. Sit tall, feet flat.  2. Lace fingers behind your head.  3. Lean back over the chair top, elbows wide, look up.  4. Return slowly. Repeat." },
@@ -55,8 +69,8 @@
                      "h": "Stand tall, shoulders back. Take a phone call or read standing if you can." },
       "shoulders": { "t": "Shoulder rolls", "d": "Big slow circles, up, back and down.", "a": "10 rolls",
                      "h": "1. Arms relaxed.  2. Lift shoulders to ears.  3. Squeeze them back.  4. Drop them down. Reverse halfway." },
-      "walk":      { "t": "Walkaround", "d": "Get up and walk. Refill your water, rest your eyes.", "a": "2 min",
-                     "h": "Stand up, walk a lap, refill your water, and look at something far away for 20 seconds." },
+      "walk":      { "t": "Walkaround", "d": "Get up and take a short, easy walk.", "a": "2 min",
+                     "h": "Stand up, walk a lap around the room or the office at an easy pace, then come back." },
       "eyes":      { "t": "20-20-20 eye break", "d": "Look at something about 6 m (20 ft) away for 20 seconds.", "a": "20 sec",
                      "h": "Look far away and blink slowly. It relaxes the focusing muscles of your eyes." },
       "wrists":    { "t": "Wrist & finger stretch", "d": "Arm out, gently pull your fingers back, then down.", "a": "15 sec each way",
@@ -100,16 +114,30 @@
              "פלאפי הפלאפל", "שווארמי השווארמה",
              "סופי הסופגנייה", "סבי הסביבון", "מנורי החנוכייה", "נרי הנר",
              "דלעתי הדלעת", "גובלס ההודו", "תירסי התירס", "פטי פאי הדלעת"],
-    "tips": [
-      "החלק העליון של המסך בגובה העיניים, במרחק של בערך יד.",
-      "כפות רגליים על הרצפה, ברכיים בערך בגובה הירכיים.",
-      "כדאי שיהיו מים על השולחן. לגימה בכל פעם ששמים לב אליהם.",
-      "מרפקים בערך ב-90°, כתפיים רפויות ולא מורמות.",
-      "למצמץ! מול מסך ממצמצים הרבה פחות.",
-      "שיחות טלפון אפשר לעשות בעמידה, או תוך כדי הליכה.",
-      "לשבת עמוק בכיסא, כך שהמשענת תתמוך בגב התחתון.",
-      "שתן בהיר = שתייה מספיקה. אולי כוס מים עכשיו?"
-    ],
+    "tips": {
+      "stretch": [
+        "החלק העליון של המסך בגובה העיניים, במרחק של בערך יד.",
+        "כפות רגליים על הרצפה, ברכיים בערך בגובה הירכיים.",
+        "מרפקים בערך ב-90°, כתפיים רפויות ולא מורמות.",
+        "לשבת עמוק בכיסא, כך שהמשענת תתמוך בגב התחתון.",
+        "לאט ובעדינות. מתיחה אף פעם לא אמורה לכאוב."
+      ],
+      "water": [
+        "כדאי שיהיו מים על השולחן. לגימה בכל פעם ששמים לב אליהם.",
+        "שתן בהיר = שתייה מספיקה.",
+        "בקבוק שרואים הוא בקבוק ששותים."
+      ],
+      "eyes": [
+        "מול מסך ממצמצים הרבה פחות. כמה מצמוצים איטיים עכשיו.",
+        "כדאי להתאים את בהירות המסך לתאורת החדר.",
+        "אם יש חלון, להסתכל החוצה: מרחק מרגיע את העיניים הכי טוב."
+      ],
+      "move": [
+        "שיחות טלפון אפשר לעשות בעמידה, או תוך כדי הליכה.",
+        "כמה הליכות קצרות עדיפות על אחת ארוכה.",
+        "אם יש מדרגות, אפשר לעלות קומה ולרדת."
+      ]
+    },
     "ex": {
       "thoracic":  { "t": "מתיחת גב עליון", "d": "ידיים מאחורי הראש, להישען עם הגב העליון אחורה מעל המשענת ולהסתכל למעלה.", "a": "10 חזרות",
                      "h": "1. לשבת זקוף, כפות רגליים על הרצפה.  2. לשלב אצבעות מאחורי הראש.  3. להישען לאחור מעל המשענת, מרפקים לצדדים, מבט למעלה.  4. לחזור לאט. שוב." },
@@ -125,8 +153,8 @@
                      "h": "לעמוד זקוף, כתפיים לאחור. אפשר לקחת שיחת טלפון או לקרוא בעמידה." },
       "shoulders": { "t": "סיבובי כתפיים", "d": "מעגלים גדולים ואיטיים: למעלה, אחורה ולמטה.", "a": "10 סיבובים",
                      "h": "1. ידיים רפויות.  2. להרים כתפיים לאוזניים.  3. לקרב אותן לאחור.  4. להוריד למטה. באמצע להחליף כיוון." },
-      "walk":      { "t": "סיבוב הליכה", "d": "לקום וללכת. למלא מים, לתת לעיניים לנוח.", "a": "2 דק׳",
-                     "h": "לקום, לעשות סיבוב, למלא מים ולהסתכל על משהו רחוק במשך 20 שניות." },
+      "walk":      { "t": "סיבוב הליכה", "d": "לקום ולעשות הליכה קצרה ונינוחה.", "a": "2 דק׳",
+                     "h": "לקום, לעשות סיבוב בחדר או במשרד בקצב רגוע, ולחזור." },
       "eyes":      { "t": "הפסקת עיניים 20-20-20", "d": "להסתכל על משהו במרחק של כ-6 מטרים במשך 20 שניות.", "a": "20 שנ׳",
                      "h": "להסתכל רחוק ולמצמץ לאט. זה מרפה את שרירי המיקוד של העיניים." },
       "wrists":    { "t": "מתיחת שורש כף יד ואצבעות", "d": "יד ישרה קדימה, למשוך בעדינות את האצבעות לאחור ואז למטה.", "a": "15 שנ׳ לכל כיוון",

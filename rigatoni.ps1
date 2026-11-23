@@ -69,20 +69,41 @@ if (-not $ex) { return }   # every reminder type switched off: nothing to show
 # ============ SOUNDS ============
 # Short, quiet, synthesized (no audio files to license). Built once into sounds\<kind>.wav, then just played.
 $SR = 22050
-function Add-Note($buf, $t0, $f, $dur, $vol, $f2 = $f, $decay = 7, $harm = 0.2) {   # plucky sine (+ optional pitch glide)
-  $n0 = [int]($t0 * $SR); $n = [int]($dur * $SR); $ph = 0.0
+function Add-Note($buf, $t0, $f, $dur, $vol, $f2 = $f, $decay = 7, $harm = 0.2, $att = 0.005) {   # sine (+ pitch glide, attack in s)
+  $n0 = [int]($t0 * $SR); $n = [int]($dur * $SR); $ph = 0.0; $na = [math]::Max(1.0, $att * $SR)
   for ($i = 0; $i -lt $n -and ($n0 + $i) -lt $buf.Length; $i++) {
     $ph += 2 * [math]::PI * ($f + ($f2 - $f) * $i / $n) / $SR
-    $env = [math]::Exp(-$decay * $i / $SR) * [math]::Min(1, $i / 120.0) * [math]::Min(1, ($n - $i) / 300.0)
+    $env = [math]::Exp(-$decay * $i / $SR) * [math]::Min(1, $i / $na) * [math]::Min(1, ($n - $i) / 300.0)
     $buf[$n0 + $i] += $vol * $env * ([math]::Sin($ph) + $harm * [math]::Sin(2 * $ph)) } }
 function Add-Splash($buf, $t0, $dur, $vol) {   # soft low-passed noise = a little water splash
   $n0 = [int]($t0 * $SR); $lp = 0.0; $rnd = New-Object Random 7
   for ($i = 0; $i -lt [int]($dur * $SR); $i++) { $lp += 0.07 * ($rnd.NextDouble() - 0.5 - $lp)
     $buf[$n0 + $i] += $vol * $lp * [math]::Exp(-6 * $i / $SR) * [math]::Min(1, $i / 400.0) } }
+function Add-Pour($buf, $t0, $dur, $vol, $f0, $f1) {
+  # a glass filling: noise through a resonant band-pass whose pitch rises as the "glass" fills, plus a few bubbles
+  $n0 = [int]($t0 * $SR); $n = [int]($dur * $SR); $rnd = New-Object Random 3
+  $x1 = 0.0; $x2 = 0.0; $y1 = 0.0; $y2 = 0.0
+  for ($i = 0; $i -lt $n; $i++) {
+    $p = $i / $n; $fc = $f0 * [math]::Pow($f1 / $f0, $p)                       # rising resonance
+    $w = 2 * [math]::PI * $fc / $SR; $al = [math]::Sin($w) / (2 * 6.0)          # Q = 6
+    $a0 = 1 + $al; $bb0 = $al / $a0; $a1 = -2 * [math]::Cos($w) / $a0; $a2 = (1 - $al) / $a0
+    $x = $rnd.NextDouble() - 0.5
+    $y = $bb0 * $x - $bb0 * $x2 - $a1 * $y1 - $a2 * $y2
+    $x2 = $x1; $x1 = $x; $y2 = $y1; $y1 = $y
+    $env = [math]::Min(1, $p * 8) * [math]::Min(1, (1 - $p) * 5)             # soft in, soft out
+    $buf[$n0 + $i] += $vol * $env * $y }
+  foreach ($k in 1..5) { $tb = $t0 + $dur * (0.15 + 0.15 * $k) + $rnd.NextDouble() * 0.05; $fb = $f0 * (1.6 + 0.5 * $k)
+    Add-Note $buf $tb $fb 0.05 ($vol * 0.08) ($fb * 1.6) 40 0 }               # tiny bubbles, higher as it fills
+}
+function Add-Whoosh($buf, $t0, $dur, $vol) {   # soft airy breath: low-passed noise, cutoff rising, bell-shaped envelope
+  $n0 = [int]($t0 * $SR); $n = [int]($dur * $SR); $lp = 0.0; $rnd = New-Object Random 11
+  for ($i = 0; $i -lt $n; $i++) { $p = $i / $n; $k = 0.02 + 0.10 * $p
+    $lp += $k * ($rnd.NextDouble() - 0.5 - $lp)
+    $buf[$n0 + $i] += $vol * $lp * [math]::Sin([math]::PI * $p) } }
 $recipes = @{
-  water    = { param($b) Add-Splash $b 0 0.45 1.2; Add-Note $b 0.03 650 0.09 0.20 1500 30; Add-Note $b 0.17 820 0.08 0.14 1700 30; Add-Note $b 0.33 700 0.08 0.10 1600 30 }
-  stretch  = { param($b) Add-Note $b 0 220 0.6 0.13 520 1.5 0.1; Add-Note $b 0.56 990 0.15 0.07 990 25 }          # stretchy glide + pop
-  move     = { param($b) Add-Note $b 0 392 0.35 0.15 392 9; Add-Note $b 0.13 523 0.45 0.15 523 8 }                 # two marimba notes up
+  water    = { param($b) Add-Pour $b 0 1.3 1.0 380 1500 }                                                           # glass filling up
+  stretch  = { param($b) Add-Whoosh $b 0 1.0 1.0; Add-Note $b 0.08 196 0.95 0.25 294 1.8 0.05 0.3 }                   # gentle stretch: breath + slow warm rise
+  move     = { param($b) Add-Whoosh $b 0 0.9 1.0; Add-Note $b 0.06 247 0.85 0.25 349 2.0 0.05 0.3 }                   # same family, a little brighter
   calm     = { param($b) Add-Note $b 0 660 1.0 0.10 660 3.5 0; Add-Note $b 0 990 0.9 0.05 990 4 0 }                 # soft bell
   done     = { param($b) Add-Note $b 0 659 0.4 0.12 659 8; Add-Note $b 0.12 880 0.6 0.12 880 6 }
   hanukkah = { param($b) $t = 0; foreach ($nt in @(392,0.16),@(330,0.16),@(392,0.16),@(330,0.16),@(330,0.16),@(330,0.4)) {   # festive "sevivon"-style jingle
@@ -660,7 +681,11 @@ function Set-Lang($code) {
   $e = $L.ex.($ex.k)
   $win.FlowDirection = if ($L.rtl) { 'RightToLeft' } else { 'LeftToRight' }  $TimeTo.Text = $L.ui.timeTo; $Word.Text = $L.ui.($ex.w); $Sub.Text = $L.ui.sub -f (Get-Name $whoIdx $L)
   $Title.Text = $e.t; $Desc.Text = $e.d; $Amount.Text = $e.a; $HowText.Text = $e.h; $How.Text = $L.ui.howto
-  $Tip.Text = $L.ui.tip -f $L.tips[$tipIdx % $L.tips.Count]
+  # tip from the SAME type as this card (one topic per reminder)
+  $myCat = @($cats.Keys | ? { $cats[$_] -contains $ex.k })[0]
+  $tips = @($L.tips.$myCat)
+  $Tip.Text = if ($tips) { $L.ui.tip -f $tips[$tipIdx % $tips.Count] } else { '' }
+  $Tip.Visibility = if ($tips) { 'Visible' } else { 'Collapsed' }
   $Count.Text = $L.ui.today -f ($st.count + [int]$script:doneShown)
   if ($script:running) { $Primary.Content = $L.ui.done; $Secondary.Content = $L.ui.stop; $Time.Text = $L.ui.left -f (Format-Secs $script:left) }
   else { $Primary.Content = $L.ui.start; $Secondary.Content = $L.ui.snooze; $Time.Text = Format-Secs $ex.s }
