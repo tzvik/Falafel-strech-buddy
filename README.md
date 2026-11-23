@@ -14,6 +14,8 @@ eyes while you sit at the computer. Animated characters act out each exercise, s
 - **Subtle sounds** that match the reminder (water drops, a stretchy glide, a soft bell; festive kits have their own
   little tune). One click to mute.
 - A short toast ("It's time to **stretch!**"), then a card with one exercise. The character demos it live.
+- Little orange **arrows** show which way to move.
+- Finish one and you get a green "Nice! That's 3 today", a happy character, and now and then a burst of **confetti**.
 - **Start** runs a countdown with a progress bar. **Snooze** brings it back in 5 minutes. Ignore it and it leaves quietly.
 - 15 exercises: thoracic extension, chin tucks, neck stretch, shoulder rolls, seated twist, wrist & finger stretch,
   20-20-20 eye break, deep breaths, calf raises, stand up, walkaround, and water breaks.

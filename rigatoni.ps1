@@ -6,7 +6,8 @@
 #   rigatoni.ps1 -Demo drink -Who 2       preview one exercise/character without touching the rotation
 #   ... -Snap C:\tmp\shot                 also save PNG frames (shot-0.png ...) and close - for testing
 #   rigatoni.ps1 -MakeSounds              (re)build the sounds\*.wav files
-param([string]$Demo, [int]$Who = -1, [string]$Lang, [switch]$Gallery, [string]$Snap, [switch]$MakeSounds)
+#   ... -Finish                           (with -Demo) jump straight to the success celebration, with confetti
+param([string]$Demo, [int]$Who = -1, [string]$Lang, [switch]$Gallery, [string]$Snap, [switch]$MakeSounds, [switch]$Finish)
 Add-Type -AssemblyName PresentationFramework
 
 $dir   = Split-Path $MyInvocation.MyCommand.Path
@@ -224,8 +225,10 @@ foreach ($pj in Get-ChildItem (Join-Path $dir 'packs') -Filter pack.json -Recurs
   try { $pk = Get-Content $pj.FullName -Raw -Encoding UTF8 | ConvertFrom-Json } catch { continue }   # skip broken packs
   $kitId = "$($pk.kit)" -replace '[^A-Za-z0-9_-]', ''
   if (-not $kitId) { continue }
+  $n = 0
   foreach ($ch in $pk.characters) {
-    $e = @{ kit = $kitId; kitNames = $pk.names; names = $ch.names; ax = [int]$ch.ax
+    $e = @{ kit = $kitId; id = "pack:${kitId}:$n"   # stable id, so adding packs never changes your pick
+            kitNames = $pk.names; names = $ch.names; ax = [int]$ch.ax
             eyes = $ch.eyes; hands = $ch.hands; mouth = $ch.mouth; noFace = ($ch.face -eq $false) }
     if ($ch.image) {   # sticker PNG/JPG as the body - must live inside the pack folder
       $file = [IO.Path]::GetFullPath((Join-Path $pj.DirectoryName $ch.image))
@@ -238,7 +241,7 @@ foreach ($pj in Get-ChildItem (Join-Path $dir 'packs') -Filter pack.json -Recurs
       if (-not (Test-SafeXaml $ch.detail) -or -not (Test-SafeXaml $ch.back)) { continue }
       $e.g = "<PathGeometry Figures='$($ch.shape)'/>"; $e.c = $cols; $e.d = "$($ch.detail)"; $e.back = "$($ch.back)"
     }
-    $cast += $e
+    $cast += $e; $n++
   }
 }
 # display names: built-ins from i18n "cast", pack characters from their own "names"
@@ -252,6 +255,7 @@ function Get-KitName($kit, $L) { if ($L.kits.$kit) { return $L.kits.$kit }
 $whoSet = if ($j -and $j.who) { "$($j.who)" } else { 'kit:streetfood' }   # default on a fresh install: Israeli street food
 $whoIdx = if ($Who -ge 0) { $Who % $cast.Count }
           elseif ($whoSet -match '^\d+$') { [int]$whoSet % $cast.Count }
+          elseif ($whoSet -like 'pack:*' -and ($hit = @(0..($cast.Count-1) | ? { $cast[$_].id -eq $whoSet }))) { $hit[0] }
           elseif ($whoSet -like 'kit:*') { $pool = @(0..($cast.Count-1) | ? { $cast[$_].kit -eq $whoSet.Substring(4) })
                                           if ($pool) { Get-Random -InputObject $pool } else { Get-Random -Maximum $cast.Count } }
           else { Get-Random -Maximum $cast.Count }
@@ -305,7 +309,7 @@ function New-Noodle($p, $who) {
 @"
 <Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Stretch="Uniform">
  <Canvas Width="110" Height="162">
-  <Canvas.Effect><DropShadowEffect BlurRadius="10" ShadowDepth="3" Direction="300" Opacity="0.22"/></Canvas.Effect>
+  <Canvas.Effect><DropShadowEffect Color="#5E544B" BlurRadius="4" ShadowDepth="5" Direction="315" Opacity="0.32"/></Canvas.Effect>
   <Canvas.RenderTransform><TranslateTransform x:Name="${p}RigT"/></Canvas.RenderTransform>
   <Canvas x:Name="${p}Chair" Visibility="Collapsed" Opacity="0.85">
    <Path Data="M 14,90 L 16,142 M 14,140 L 80,140 M 20,140 L 18,162 M 76,140 L 78,162" Stroke="#9C9A96" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
@@ -327,6 +331,7 @@ function New-Noodle($p, $who) {
     $(& $arm 'L' (24+$ax) (22+$ax) (21+$ax)) $(& $arm 'R' (86-$ax) (88-$ax) (89-$ax))
    </Canvas>
   </Canvas>
+  <Canvas x:Name="${p}Arrows"/>
  </Canvas>
 </Viewbox>
 "@
@@ -386,6 +391,43 @@ $moves = @{
   calves    = { M CRigT Y @(0,-9,-9,0,0) 1.6; M CLLegF A @(0,-8,-8,0,0) 1.6; M CRLegF A @(0,8,8,0,0) 1.6 }                    # up on toes, down
 }
 
+# Motion arrows: small orange arrows that pulse in the direction to move. @(x, y, angle) in rig coordinates
+# (110x162 box; angle 0 = right, 90 = down, 180 = left, -90 = up).
+$arrowsFor = @{
+  chin      = @(,@(98,62,180))                         # head straight back
+  neck      = @(@(12,20,135), @(98,20,45))             # tilt ear to shoulder, each side
+  thoracic  = @(,@(92,26,-120))                        # arch up and back
+  shoulders = @(@(8,66,-90), @(102,66,-90))            # shrug up
+  twist     = @(@(4,92,180), @(106,92,0))              # turn each way
+  wrists    = @(@(2,52,90), @(108,52,90))              # hands flex down
+  stand     = @(,@(104,100,-90))                       # get up
+  calves    = @(,@(100,136,-90))                       # onto your toes
+  walk      = @(,@(96,152,0))                          # off you go
+  eyes      = @(,@(96,56,0))                           # look far away
+  breathe   = @(@(2,96,180), @(108,96,0))              # chest expands
+  drink     = @(,@(104,96,-90))                        # glass up
+}
+$arrowsFor.drink2 = $arrowsFor.drink
+$showArrows = {
+  $layer = $win.FindName('CArrows'); if (-not $layer) { return }
+  foreach ($a in $arrowsFor[$ex.k]) {
+    $pth = New-Object System.Windows.Shapes.Path -Property @{ Stroke = '#E8662A'; StrokeThickness = 3.2
+             StrokeStartLineCap = 'Round'; StrokeEndLineCap = 'Round'; StrokeLineJoin = 'Round'
+             Data = [System.Windows.Media.Geometry]::Parse('M -7,0 L 7,0 M 2,-5 L 7,0 L 2,5') }
+    [System.Windows.Controls.Canvas]::SetLeft($pth, $a[0]); [System.Windows.Controls.Canvas]::SetTop($pth, $a[1])
+    $tt = New-Object System.Windows.Media.TranslateTransform
+    $tg = New-Object System.Windows.Media.TransformGroup
+    $tg.Children.Add((New-Object System.Windows.Media.RotateTransform($a[2]))); $tg.Children.Add($tt); $pth.RenderTransform = $tg
+    [void]$layer.Children.Add($pth)
+    $rad = $a[2] * [math]::PI / 180
+    foreach ($pr in @(@([System.Windows.Media.TranslateTransform]::XProperty, [math]::Cos($rad)), @([System.Windows.Media.TranslateTransform]::YProperty, [math]::Sin($rad)))) {
+      $an = New-Object System.Windows.Media.Animation.DoubleAnimation(0, (5 * $pr[1]), [TimeSpan]::FromSeconds(0.6)) -Property @{ AutoReverse = $true
+              RepeatBehavior = [System.Windows.Media.Animation.RepeatBehavior]::Forever
+              EasingFunction = (New-Object System.Windows.Media.Animation.SineEase -Property @{ EasingMode = 'EaseInOut' }) }
+      $tt.BeginAnimation($pr[0], $an) }
+  }
+}
+
 # ============ SNAPSHOTS (testing) ============
 function Save-Frame($n) {
   $el = $script:win.Content; $w = $el.ActualWidth; $h = $el.ActualHeight
@@ -441,7 +483,9 @@ if ($Gallery) {
   foreach ($kit in $kits) {     # one section per kit
     $kname = Get-KitName $kit $L
     $row = Tile "kit:$kit" (& $dice '#C2A15A') ($L.ui.randomKit -f $kname)
-    for ($i = 0; $i -lt $cast.Count; $i++) { if ($cast[$i].kit -eq $kit) { $row += Tile "$i" (New-Noodle "G$i" $cast[$i]) (Get-Name $i $L) } }
+    for ($i = 0; $i -lt $cast.Count; $i++) { if ($cast[$i].kit -eq $kit) {
+      $tag = if ($cast[$i].id) { $cast[$i].id } else { "$i" }   # pack characters are saved by id, built-ins by index
+      $row += Tile $tag (New-Noodle "G$i" $cast[$i]) (Get-Name $i $L) } }
     $body += & $section $kname $row
   }
   $tiles = $body
@@ -511,7 +555,11 @@ $pill = @'
       <TextBlock x:Name="Amount" FontSize="13" FontWeight="SemiBold" Foreground="#C2410C" Margin="0,4,0,0"/>
       <TextBlock x:Name="HowText" Visibility="Collapsed" FontSize="12" Foreground="#555" TextWrapping="Wrap" Margin="0,6,0,0"/>
       <TextBlock x:Name="Tip" FontSize="11.5" FontStyle="Italic" Foreground="#8A7F72" TextWrapping="Wrap" Margin="0,6,0,0"/>
-      <DockPanel Margin="0,8,0,0">
+      <StackPanel x:Name="Success" Orientation="Horizontal" Visibility="Collapsed" Margin="0,10,0,2">
+       <Grid Width="20" Height="20"><Ellipse Fill="#2EA44F"/><Path Data="M 5,10.5 L 8.5,14 L 15,6.5" Stroke="White" StrokeThickness="2.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/></Grid>
+       <TextBlock x:Name="SuccessText" FontSize="14" FontWeight="SemiBold" Foreground="#1F7A3A" Margin="8,0,0,0" VerticalAlignment="Center"/>
+      </StackPanel>
+      <DockPanel x:Name="Actions" Margin="0,8,0,0">
        <TextBlock x:Name="Time" DockPanel.Dock="Right" FontSize="12" Foreground="#888" VerticalAlignment="Center" Margin="10,0,0,0"/>
        <TextBlock x:Name="How" DockPanel.Dock="Right" FontSize="13" FontWeight="SemiBold" Foreground="#333" VerticalAlignment="Center" Cursor="Hand"/>
        <StackPanel Orientation="Horizontal">
@@ -528,6 +576,8 @@ $pill = @'
     </Border>
    </Grid>
   </Border>
+  <!-- confetti layer (on top, never catches clicks) -->
+  <Canvas x:Name="Fx" IsHitTestVisible="False" ClipToBounds="True" Margin="-14"/>
   <!-- close (x): round badge over the card's corner above the character (left in English, right in Hebrew - follows FlowDirection) -->
   <Border x:Name="CloseX" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-9,-9,0,0" Width="24" Height="24" CornerRadius="12"
           Background="White" BorderBrush="#E4DED6" BorderThickness="1" Cursor="Hand" ToolTip="Close">
@@ -539,7 +589,7 @@ $pill = @'
 "@
 
 $script:win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $xaml))
-'TimeTo','Word','Sub','Toast','Card','Count','Title','Desc','Amount','HowText','Tip','Time','How','Primary','Secondary','Bar' |
+'TimeTo','Word','Sub','Toast','Card','Count','Title','Desc','Amount','HowText','Tip','Time','How','Primary','Secondary','Bar','Success','SuccessText','Actions','Fx' |
   ForEach-Object { Set-Variable -Name $_ -Value $win.FindName($_) }
 $tipIdx = Get-Random -Maximum 1000
 
@@ -557,7 +607,7 @@ function Set-Lang($code) {
   $Count.Text = $L.ui.today -f ($st.count + [int]$script:doneShown)
   if ($script:running) { $Primary.Content = $L.ui.done; $Secondary.Content = $L.ui.stop; $Time.Text = $L.ui.left -f (Format-Secs $script:left) }
   else { $Primary.Content = $L.ui.start; $Secondary.Content = $L.ui.snooze; $Time.Text = Format-Secs $ex.s }
-  if ($script:doneShown) { $Time.Text = $L.ui.nice }
+  if ($script:doneShown) { $Time.Text = $L.ui.nice; $SuccessText.Text = $L.ui.success -f ($st.count + 1) }
   foreach ($m in $win.ContextMenu.Items) { if ($m -is [System.Windows.Controls.MenuItem]) {
     if ($m.Tag -eq 'mute') { $m.Header = $L.ui.mute; $m.IsChecked = $script:muted } else { $m.IsChecked = ($m.Tag -eq $code) } } }
 }
@@ -599,7 +649,10 @@ $win.Add_Loaded({ Set-Corner; Alive T; Wave T; Play-Sound $soundKind })
 # toast -> card after 2.5s (click toast to skip); the card's character starts its demo
 $intro = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromSeconds(2.5) }
 $showCard = { if ($Card.Visibility -eq 'Visible') { return }
-  $intro.Stop(); $Toast.Visibility='Collapsed'; $Card.Visibility='Visible'; Alive C; & $moves[$ex.k] }
+  $intro.Stop(); $Toast.Visibility='Collapsed'; $Card.Visibility='Visible'; Alive C; & $moves[$ex.k]
+  & $showArrows
+  if ($Finish) { $script:fin = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromMilliseconds(300) }
+                 $script:fin.Add_Tick({ $script:fin.Stop(); Complete-Exercise }); $script:fin.Start() } }
 $intro.Add_Tick($showCard); $Toast.Add_MouseLeftButtonDown($showCard); $intro.Start()
 
 # ignored for 3 min -> quietly go away
@@ -612,21 +665,52 @@ $CloseX.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $win.Close()
 $How.Add_MouseLeftButtonDown({ $HowText.Visibility = if ($HowText.Visibility -eq 'Visible') {'Collapsed'} else {'Visible'} })
 
 $tick = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromSeconds(1) }
-function Complete-Exercise { Save-State -AddDone; $win.Close() }
+# --- celebration: confetti burst (milestones always, otherwise ~1 in 3) ---
+function Start-Confetti {
+  $w = $win.ActualWidth; $h = $win.ActualHeight; $rnd = New-Object Random
+  $colors = '#E8662A', '#F5BE52', '#2EA44F', '#4A90D9', '#E86A9A', '#9B6ADE', '#F2D24B'
+  for ($i = 0; $i -lt 55; $i++) {
+    $piece = if ($rnd.Next(3) -eq 0) { New-Object System.Windows.Shapes.Ellipse -Property @{ Width=7; Height=7 } }
+             else { New-Object System.Windows.Shapes.Rectangle -Property @{ Width=5 + $rnd.Next(4); Height=9 + $rnd.Next(5); RadiusX=1.5; RadiusY=1.5 } }
+    $piece.Fill = $colors[$rnd.Next($colors.Count)]
+    [System.Windows.Controls.Canvas]::SetLeft($piece, $rnd.NextDouble() * $w); [System.Windows.Controls.Canvas]::SetTop($piece, -12 - $rnd.Next(40))
+    $tt = New-Object System.Windows.Media.TranslateTransform; $rt = New-Object System.Windows.Media.RotateTransform
+    $tg = New-Object System.Windows.Media.TransformGroup; $tg.Children.Add($rt); $tg.Children.Add($tt); $piece.RenderTransform = $tg
+    [void]$Fx.Children.Add($piece)
+    $dur = [TimeSpan]::FromSeconds(1.3 + $rnd.NextDouble() * 1.1); $delay = [TimeSpan]::FromMilliseconds($rnd.Next(350))
+    $fall = New-Object System.Windows.Media.Animation.DoubleAnimation(0, ($h + 60), $dur) -Property @{ BeginTime = $delay
+              EasingFunction = (New-Object System.Windows.Media.Animation.QuadraticEase -Property @{ EasingMode = 'EaseIn' }) }
+    $tt.BeginAnimation([System.Windows.Media.TranslateTransform]::YProperty, $fall)
+    $tt.BeginAnimation([System.Windows.Media.TranslateTransform]::XProperty, (New-Object System.Windows.Media.Animation.DoubleAnimation(0, ($rnd.Next(-50, 50)), $dur) -Property @{ BeginTime = $delay }))
+    $rt.BeginAnimation([System.Windows.Media.RotateTransform]::AngleProperty, (New-Object System.Windows.Media.Animation.DoubleAnimation(0, ($rnd.Next(-720, 720)), $dur) -Property @{ BeginTime = $delay }))
+  }
+}
+# --- finishing an exercise (Done, or the countdown ran out): green success row, cheer, maybe confetti, then close ---
+function Complete-Exercise {
+  if ($script:doneShown) { return }
+  $tick.Stop(); $idle.Stop(); if (-not $Demo) { Save-State -AddDone }   # previews don't count
+  $script:doneShown = $true; Set-Lang $st.lang
+  $Actions.Visibility = 'Collapsed'; $Success.Visibility = 'Visible'
+  $Bar.Fill = '#2EA44F'; $Bar.Width = $Card.ActualWidth
+  Play-Sound done
+  M CLArmU A @(150,175,150) .5; M CRArmU A @(-150,-175,-150) .5; M CLArmF A @(0,0) 1; M CRArmF A @(0,0) 1   # arms up, cheering
+  M CRigT Y @(0,-9,0) .5
+  $n = $st.count + 1
+  if ($Finish -or $n -in 1, 3, 5, 8, 10, 15, 20 -or (Get-Random -Maximum 3) -eq 0) { Start-Confetti }
+  $end = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromSeconds(3) }
+  $end.Add_Tick({ $win.Close() }); $end.Start()
+}
 $tick.Add_Tick({
   $script:left--
   $Bar.Width = ($Card.ActualWidth) * (1 - $script:left / $ex.s)
-  if ($script:left -le 0) { $tick.Stop(); Play-Sound done
-    $script:doneShown = $true; Set-Lang $st.lang
-    $end = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromSeconds(2) }
-    $end.Add_Tick({ Complete-Exercise }); $end.Start()
-  } else { $Time.Text = $L.ui.left -f (Format-Secs $script:left) }
+  if ($script:left -le 0) { Complete-Exercise }
+  else { $Time.Text = $L.ui.left -f (Format-Secs $script:left) }
 })
 
 $Primary.Add_Click({
   if (-not $script:running) {           # Start
     $script:running = $true; $idle.Stop(); Set-Lang $st.lang; $tick.Start()
-  } else { $tick.Stop(); Complete-Exercise }   # Done
+  } else { Complete-Exercise }   # Done
 })
 $Secondary.Add_Click({
   if (-not $script:running) {           # Snooze: come back in 5 min
