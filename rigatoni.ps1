@@ -440,7 +440,6 @@ $moves = @{
 # (110x162 box; angle 0 = right, 90 = down, 180 = left, -90 = up).
 $arrowsFor = @{
   neck     = @(@(12,20,135), @(98,20,45))             # tilt ear to shoulder, each side
-  thoracic  = @(,@(92,26,-120))                        # arch up and back
   shoulders = @(@(8,66,-90), @(102,66,-90))            # shrug up
   twist     = @(@(4,92,180), @(106,92,0))              # turn each way
   wrists    = @(@(2,52,90), @(108,52,90))              # hands flex down
@@ -451,7 +450,10 @@ $arrowsFor = @{
   breathe   = @(@(2,96,180), @(108,96,0))              # chest expands
 }                                                      # (no arrows for drinking: not a body movement)
 $showArrows = {
+  # one arrow per movement: if a side-view bubble explains it, no arrows on the character
+  # (chin and thoracic have bubbles, so they have no entries above)
   $layer = $win.FindName('CArrows'); if (-not $layer) { return }
+  if ($win.FindName('SideHint').Visibility -eq 'Visible') { $Card.Width = 510; return }   # make room for the bubble
   foreach ($a in $arrowsFor[$ex.k]) {
     $pth = New-Object System.Windows.Controls.Canvas   # white outline under orange: visible on any character
     foreach ($st2 in @('White', 7.5), @('#E8662A', 3.4)) {
@@ -591,11 +593,11 @@ $pill = @'
    <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.18"/></Border.Effect>
    <Grid>
     <Grid Margin="12">
-     <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-     <Border Background="#F1EBE2" CornerRadius="14" Padding="8" Height="136" VerticalAlignment="Top"><Grid>$(New-Noodle 'C' $cast[$whoIdx])
-      <!-- side-view hint: for moves a front view can't show (head back, lean back) -->
-      <Border x:Name="SideHint" Visibility="Collapsed" Width="64" Height="64" CornerRadius="32" Background="White" BorderBrush="#E0D8CE" BorderThickness="1.5"
-              HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-6,-6" ToolTip="Side view">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+     <Border Background="#F1EBE2" CornerRadius="14" Padding="8" Height="136" VerticalAlignment="Top">$(New-Noodle 'C' $cast[$whoIdx])</Border>
+      <!-- side-view hint: small bubble BESIDE the character (never covering it), for moves a front view can't show -->
+      <Border x:Name="SideHint" Grid.Column="1" Visibility="Collapsed" Width="64" Height="64" CornerRadius="32" Background="White" BorderBrush="#E0D8CE" BorderThickness="1.5"
+              HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8,0,0,6" ToolTip="Side view">
        <Border.Effect><DropShadowEffect BlurRadius="5" ShadowDepth="1" Opacity="0.2"/></Border.Effect>
        <Viewbox Margin="5"><Grid Width="60" Height="60">
         <Canvas x:Name="ChinHint" Visibility="Collapsed">
@@ -623,8 +625,8 @@ $pill = @'
          <Path Data="M 44,10 Q 36,0 24,0 M 29,-4 L 24,0 L 29,5" Stroke="#E8662A" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
         </Canvas>
        </Grid></Viewbox>
-      </Border></Grid></Border>
-     <StackPanel Grid.Column="1" Margin="14,2,4,0">
+      </Border>
+     <StackPanel Grid.Column="2" Margin="14,2,4,0">
       <DockPanel>
        <TextBlock x:Name="Count" DockPanel.Dock="Right" FontSize="12" Foreground="#888" VerticalAlignment="Center"/>
        <TextBlock x:Name="Title" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A"/>
