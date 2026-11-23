@@ -1,0 +1,21 @@
+{
+  "kit": "bakery",
+  "names": { "en": "Bakery", "he": "מאפייה" },
+  "characters": [
+    {
+      "names": { "en": "Bagi the Bagel", "he": "בייגי הבייגלה" },
+      "shape": "M 55,40 C 86,40 100,60 100,84 C 100,110 80,126 55,126 C 30,126 10,110 10,84 C 10,60 24,40 55,40 Z",
+      "colors": ["#C98A3E", "#E8B46A", "#B87A30"],
+      "detail": "<Ellipse Canvas.Left='22' Canvas.Top='60' Width='6' Height='3' Fill='#FFF6DC'/><Ellipse Canvas.Left='80' Canvas.Top='58' Width='6' Height='3' Fill='#FFF6DC'/><Ellipse Canvas.Left='18' Canvas.Top='96' Width='6' Height='3' Fill='#FFF6DC'/><Ellipse Canvas.Left='86' Canvas.Top='92' Width='6' Height='3' Fill='#FFF6DC'/><Ellipse Canvas.Left='40' Canvas.Top='112' Width='6' Height='3' Fill='#FFF6DC'/><Ellipse Canvas.Left='66' Canvas.Top='114' Width='6' Height='3' Fill='#FFF6DC'/><Ellipse Canvas.Left='52' Canvas.Top='44' Width='6' Height='3' Fill='#FFF6DC'/>",
+      "eyes": "googly"
+    },
+    {
+      "names": { "en": "Pete the Pita", "he": "פיתי הפיתה" },
+      "shape": "M 14,72 Q 14,30 55,30 Q 96,30 96,72 L 96,124 Q 96,130 90,130 L 20,130 Q 14,130 14,124 Z",
+      "colors": ["#E2BE82", "#F6E3BA", "#D8B272"],
+      "detail": "<Ellipse Canvas.Left='26' Canvas.Top='44' Width='9' Height='6' Fill='#C99A55' Opacity='0.6'/><Ellipse Canvas.Left='76' Canvas.Top='100' Width='10' Height='6' Fill='#C99A55' Opacity='0.6'/><Ellipse Canvas.Left='24' Canvas.Top='108' Width='8' Height='5' Fill='#C99A55' Opacity='0.6'/>",
+      "hands": "glove",
+      "mouth": "lips"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# personal settings
+state.json
+# your own character packs stay private; only the example ships
+packs/*
+!packs/README.md
+!packs/example-bakery/
