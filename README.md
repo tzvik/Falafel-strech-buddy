@@ -10,6 +10,9 @@ eyes while you sit at the computer. Animated characters act out each exercise, s
 ## What it does
 
 - About **every 2 hours, at a slightly random time** (adjustable: ~1h / 1.5h / 2h / 3h). Not a nag.
+- **Choose your reminder types**: Stretches, Water, Get up & move, Eyes & breathing, each Often / Sometimes / Off.
+- **Subtle sounds** that match the reminder (water drops, a stretchy glide, a soft bell; festive kits have their own
+  little tune). One click to mute.
 - A short toast ("It's time to **stretch!**"), then a card with one exercise. The character demos it live.
 - **Start** runs a countdown with a progress bar. **Snooze** brings it back in 5 minutes. Ignore it and it leaves quietly.
 - 15 exercises: thoracic extension, chin tucks, neck stretch, shoulder rolls, seated twist, wrist & finger stretch,
@@ -25,8 +28,9 @@ eyes while you sit at the computer. Animated characters act out each exercise, s
 
 Kits of characters. Pick one, a random one from a kit, or a surprise from everyone.
 
-- **Hanukkah** (default): Sufganiya, Dreidel, Menorah
-- **Israeli street food**: Falafel, Shawarma
+- **Israeli street food** (default): Falafel, Shawarma
+- **Hanukkah**: Sufganiya, Dreidel, Menorah, Candle
+- **Thanksgiving**: Pumpkin, Turkey, Corn, Pumpkin Pie
 - **Pasta**: Rigatoni, Penne, Farfalle, Ravioli, Spaghetti, Lasagna
 - **Bakery** (example pack): Bagel, Pita
 
@@ -38,16 +42,21 @@ Like a WhatsApp sticker pack: drop a folder into `packs\` with a `pack.json` and
 PNGs or simple vector shapes. Every character automatically gets arms, legs, blinking and all the
 exercise animations. See [packs/README.md](packs/README.md).
 
+To share a pack, zip its folder. Others install it from the tray: **Character > Add character pack…**
+Packs are checked before loading (drawing elements only, images stay inside the pack), so a shared
+pack can't run code.
+
 ## Install
 
-Windows 10/11, nothing else needed (uses built-in PowerShell + WPF).
+**Easy way:** download `StretchBuddy-Setup.exe` from the [Releases](../../releases) page and double-click it.
+No admin rights needed. It installs for your user, starts with Windows, and shows up in
+**Settings > Apps** so you can uninstall it like any app.
 
-1. Download or clone this repo to a folder you'll keep.
-2. Right-click `install.ps1` > **Run with PowerShell**
-   (or: `powershell -ExecutionPolicy Bypass -File install.ps1`).
-3. Find the rigatoni in your system tray (click the `^` arrow if it's hidden).
+Windows may show "Windows protected your PC" because the installer isn't code-signed yet:
+click **More info > Run anyway**.
 
-It starts with Windows from then on. To remove it, run `uninstall.ps1`.
+**From source:** clone the repo and run `powershell -ExecutionPolicy Bypass -File install.ps1`.
+Build the installer yourself with `installer\build.ps1` (uses IExpress, built into Windows).
 
 ## Files
 
@@ -57,6 +66,8 @@ It starts with Windows from then on. To remove it, run `uninstall.ps1`.
 | `tray.ps1` | tray icon, timer and settings menu |
 | `i18n.json` | all text (English, Hebrew) |
 | `packs\` | extra character kits |
+| `sounds\` | the little alert sounds (synthesized by `rigatoni.ps1 -MakeSounds`) |
+| `installer\` | builds `StretchBuddy-Setup.exe` |
 | `state.json` | your settings (created on first run, not in git) |
 
 Preview any exercise/character: `powershell -File rigatoni.ps1 -Demo drink -Who 8 -Lang he`

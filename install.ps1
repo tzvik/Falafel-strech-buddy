@@ -1,12 +1,26 @@
-# Install: start the tray icon now and at every login (Startup-folder shortcut, no admin needed).
+# Install: start the tray icon now and at every login (Startup-folder shortcut, no admin needed),
+# add a Start-menu shortcut and an entry in Windows "Apps" so it can be uninstalled normally.
 $dir = Split-Path $MyInvocation.MyCommand.Path
-$lnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'Noodle Reminder.lnk'
+$ws  = New-Object -ComObject WScript.Shell
 
-$sc = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
-$sc.TargetPath = "$env:WINDIR\System32\wscript.exe"
-$sc.Arguments = "`"$dir\launch.vbs`" tray.ps1"
-$sc.WorkingDirectory = $dir
-$sc.Save()
+foreach ($lnk in (Join-Path ([Environment]::GetFolderPath('Startup')) 'Noodle Reminder.lnk'),
+                 (Join-Path ([Environment]::GetFolderPath('Programs')) 'Stretch Buddy.lnk')) {
+  $sc = $ws.CreateShortcut($lnk)
+  $sc.TargetPath = "$env:WINDIR\System32\wscript.exe"
+  $sc.Arguments = "`"$dir\launch.vbs`" tray.ps1"
+  $sc.WorkingDirectory = $dir
+  $sc.Save()
+}
+
+# Windows "Apps > Installed apps" entry (per-user)
+$key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\StretchBuddy'
+New-Item -Force $key | Out-Null
+Set-ItemProperty $key DisplayName 'Stretch Buddy'
+Set-ItemProperty $key Publisher 'Stretch Buddy'
+Set-ItemProperty $key InstallLocation $dir
+Set-ItemProperty $key UninstallString "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$dir\uninstall.ps1`""
+Set-ItemProperty $key NoModify 1 -Type DWord
+Set-ItemProperty $key NoRepair 1 -Type DWord
 
 # older versions used a 20-minute scheduled task; the tray does the timing now
 Unregister-ScheduledTask -TaskName 'Rigatoni Posture Reminder' -Confirm:$false -ErrorAction SilentlyContinue

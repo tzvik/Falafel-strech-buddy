@@ -51,8 +51,20 @@ The face sits around (56, 65), shoulders at y 72, hips at (44, 124) and (66, 124
 | `eyes` | `dots` (default), `googly` |
 | `mouth` | `smile` (default), `lips` |
 | `hands` | `mitt` (default), `glove` (white cartoon gloves) |
+| `mouth` also | `beak` (with a wattle, like the turkey) |
+| `back` | extra XAML drawn *behind* the body (tail feathers, leaves) |
 | `face` | `false` to hide the drawn face (for sticker images that have one) |
 | `ax` | number: pull shoulders inward for narrow bodies (e.g. `10`) |
+
+## Sharing a pack
+
+Zip the pack folder (the zip must contain `pack.json`). Anyone can install it from the tray:
+**Character > Add character pack…**
+
+For safety, packs are checked before loading: `detail`/`back` may only use drawing elements
+(Canvas, Ellipse, Rectangle, Path, Line, Polygon, TextBlock and transforms), no `{...}` markup
+extensions; colors must be hex; images must be PNG/JPG inside the pack folder. Anything else
+makes that character get skipped.
 
 ## Copyright
 

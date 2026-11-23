@@ -1,3 +1,6 @@
+# build output (the .exe goes on GitHub Releases)
+dist/
+installer/build/
 # personal settings
 state.json
 # your own character packs stay private; only the example ships

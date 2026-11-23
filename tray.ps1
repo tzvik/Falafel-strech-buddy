@@ -15,7 +15,7 @@ function Set-State($changes) {    # same merge-write as the popup, so neither cl
   foreach ($k in $changes.Keys) { $cur[$k] = $changes[$k] }
   $cur | ConvertTo-Json | Set-Content $state -Encoding utf8
 }
-function Get-L { $s = Get-State; $code = if ($s.lang -and $I.($s.lang)) { $s.lang } else { 'en' }; $I.$code }
+function Get-L { $s = Get-State; $code = if ($s.lang -and $I.($s.lang)) { $s.lang } else { 'he' }; $I.$code }   # default Hebrew
 function Get-Every { $e = [int](Get-State).every; if ($e -gt 0) { $e } else { 120 } }   # minutes; default ~2h
 # Random timing: each gap is the chosen interval +/- 25%, so reminders don't feel like a metronome.
 function Get-NextTime { (Get-Date).AddMinutes((Get-Every) * (0.75 + (Get-Random -Maximum 1000) / 2000)) }
@@ -36,6 +36,26 @@ $ni.Visible = $true
 
 $script:next = Get-NextTime
 function Show-Reminder { Start-Process wscript.exe -ArgumentList "`"$dir\launch.vbs`""; $script:next = Get-NextTime }
+# Install a character pack from a .zip (a folder containing pack.json). Entries are checked so nothing lands outside packs\.
+function Add-Pack {
+  $L = Get-L
+  $dlg = New-Object System.Windows.Forms.OpenFileDialog -Property @{ Filter = 'Character pack (*.zip)|*.zip'; Title = $L.ui.addPack }
+  if ($dlg.ShowDialog() -ne 'OK') { return }
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $name = [IO.Path]::GetFileNameWithoutExtension($dlg.FileName) -replace '[^A-Za-z0-9_-]', '_'
+  $dest = [IO.Path]::GetFullPath((Join-Path $dir "packs\$name"))
+  try {
+    $zip = [IO.Compression.ZipFile]::OpenRead($dlg.FileName)
+    if (-not ($zip.Entries | ? { $_.Name -eq 'pack.json' })) { throw $L.ui.packBad }
+    foreach ($en in $zip.Entries) {
+      $out = [IO.Path]::GetFullPath((Join-Path $dest $en.FullName))
+      if (-not $out.StartsWith($dest, 'OrdinalIgnoreCase')) { throw $L.ui.packBad }   # zip-slip guard
+      if ($en.Name) { New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null; [IO.Compression.ZipFileExtensions]::ExtractToFile($en, $out, $true) }
+    }
+    $zip.Dispose()
+    $ni.ShowBalloonTip(4000, 'Stretch Buddy', $L.ui.packOk, 'Info'); Show-Gallery
+  } catch { if ($zip) { $zip.Dispose() }; [System.Windows.Forms.MessageBox]::Show("$($L.ui.packBad)`n$($_.Exception.Message)") | Out-Null }
+}
 function Show-Gallery  { Start-Process wscript.exe -ArgumentList "`"$dir\launch.vbs`" rigatoni.ps1 -Gallery" }
 function Update-Tip { $L = Get-L
   $ni.Text = if ((Get-PausedUntil) -gt (Get-Date)) { $L.ui.tipPaused }
@@ -58,7 +78,7 @@ $menu.Add_Opening({
 
   # character: the gallery picks a specific one; here are the random options (default = Hanukkah kit)
   $ch = Add-Item $menu $L.ui.character $null $false $null
-  $who = if ($s.who) { "$($s.who)" } else { 'kit:hanukkah' }
+  $who = if ($s.who) { "$($s.who)" } else { 'kit:streetfood' }
   Add-Item $ch $L.ui.chooseChar $null $false { Show-Gallery } | Out-Null
   [void]$ch.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
   Add-Item $ch $L.ui.random 'random' ($who -eq 'random') { param($o) Set-State @{ who = 'random' } } | Out-Null
@@ -72,12 +92,27 @@ $menu.Add_Opening({
     Add-Item $ch ($L.ui.randomKit -f $kits[$kit]) "kit:$kit" ($who -eq "kit:$kit") { param($o) Set-State @{ who = $o.Tag } } | Out-Null
   }
   if ($who -match '^\d+$' -and [int]$who -lt $L.cast.Count) { Add-Item $ch $L.cast[[int]$who] $who $true { Show-Gallery } | Out-Null }
+  [void]$ch.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+  Add-Item $ch $L.ui.addPack $null $false { Add-Pack } | Out-Null
 
   $lg = Add-Item $menu $L.ui.language $null $false $null
   foreach ($code in $I.psobject.Properties.Name) {
-    Add-Item $lg $I.$code.name $code ($code -eq $(if ($s.lang) { $s.lang } else { 'en' })) { param($o) Set-State @{ lang = $o.Tag }; Update-Tip } | Out-Null
+    Add-Item $lg $I.$code.name $code ($code -eq $(if ($s.lang) { $s.lang } else { 'he' })) { param($o) Set-State @{ lang = $o.Tag }; Update-Tip } | Out-Null
   }
 
+  # reminder types: Often / Sometimes / Off for each kind (defaults match rigatoni.ps1)
+  $ty = Add-Item $menu $L.ui.types $null $false $null
+  $defaults = @{ stretch = 2; water = 2; move = 1; eyes = 1 }
+  foreach ($cat in 'stretch', 'water', 'move', 'eyes') {
+    $cur = if ($s.types -and $null -ne $s.types.$cat) { [int]$s.types.$cat } else { $defaults[$cat] }
+    $sub = Add-Item $ty $L.ui.cats.$cat $null $false $null
+    foreach ($lv in @(2, 'often'), @(1, 'sometimes'), @(0, 'off')) {
+      Add-Item $sub $L.ui.($lv[1]) "${cat}:$($lv[0])" ($cur -eq $lv[0]) { param($o)
+        $c, $v = $o.Tag -split ':'
+        $t = @{}; $old = (Get-State).types; if ($old) { $old.psobject.Properties | % { $t[$_.Name] = $_.Value } }
+        $t[$c] = [int]$v; Set-State @{ types = $t } } | Out-Null
+    }
+  }
   $ev = Add-Item $menu $L.ui.every $null $false $null
   $opts = 60, 90, 120, 180
   for ($i = 0; $i -lt $opts.Count; $i++) {
@@ -90,6 +125,7 @@ $menu.Add_Opening({
   } else {
     Add-Item $menu $L.ui.pause $null $false { Set-State @{ pausedUntil = (Get-Date).AddHours(1).ToString('o') }; Update-Tip } | Out-Null
   }
+  Add-Item $menu $L.ui.mute $null ([bool]$s.mute) { Set-State @{ mute = -not [bool](Get-State).mute } } | Out-Null
   Add-Item $menu $L.ui.resetPos $null $false { Set-State @{ right = $null; bottom = $null } } | Out-Null
   [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
   Add-Item $menu $L.ui.exit $null $false { $ni.Visible = $false; [System.Windows.Forms.Application]::Exit() } | Out-Null

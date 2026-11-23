@@ -5,7 +5,8 @@
 #   rigatoni.ps1 -Gallery                 character picker
 #   rigatoni.ps1 -Demo drink -Who 2       preview one exercise/character without touching the rotation
 #   ... -Snap C:\tmp\shot                 also save PNG frames (shot-0.png ...) and close - for testing
-param([string]$Demo, [int]$Who = -1, [string]$Lang, [switch]$Gallery, [string]$Snap)
+#   rigatoni.ps1 -MakeSounds              (re)build the sounds\*.wav files
+param([string]$Demo, [int]$Who = -1, [string]$Lang, [switch]$Gallery, [string]$Snap, [switch]$MakeSounds)
 Add-Type -AssemblyName PresentationFramework
 
 $dir   = Split-Path $MyInvocation.MyCommand.Path
@@ -24,15 +25,31 @@ $exercises = @(
 
 # --- state: next exercise, done-today counter, dragged position, language, character ---
 $today = (Get-Date).ToString('yyyy-MM-dd')
-$st = @{ count=0; idx=0; right=$null; bottom=$null; lang='en' }
+$st = @{ count=0; idx=0; right=$null; bottom=$null; lang='he' }   # default language: Hebrew
 $j = $null
 try { $j = Get-Content $state -Raw -ErrorAction Stop | ConvertFrom-Json; $st.idx = [int]$j.idx
       $st.right = $j.right; $st.bottom = $j.bottom; if ($j.lang) { $st.lang = $j.lang }
       if ($j.date -eq $today) { $st.count = [int]$j.count } } catch {}
 if ($Lang) { $st.lang = $Lang }
 if (-not $I.($st.lang)) { $st.lang = 'en' }
-$ex = $exercises[$st.idx % $exercises.Count]
-if ($Demo) { $ex = $exercises | Where-Object { $_.k -eq $Demo } | Select-Object -First 1 }
+# Reminder types (tray > Reminder types): weight 2 = often, 1 = sometimes, 0 = off.
+# Each popup picks a type by weight (never the same type twice in a row if others are on),
+# then the next exercise of that type in turn.
+$cats = [ordered]@{ stretch = 'thoracic','chin','neck','wrists','twist','shoulders'; water = 'drink','drink2'
+                    move = 'stand','walk','calves'; eyes = 'eyes','breathe' }
+$weights = @{ stretch = 2; water = 2; move = 1; eyes = 1 }
+if ($j -and $j.types) { foreach ($c in @($cats.Keys)) { if ($null -ne $j.types.$c) { $weights[$c] = [int]$j.types.$c } } }
+function Select-Exercise {
+  $on = @($cats.Keys | ? { $weights[$_] -gt 0 })
+  if (-not $on) { return $null }
+  $pool = @($on | ? { $_ -ne $j.lastCat }); if (-not $pool) { $pool = $on }
+  $bag = foreach ($c in $pool) { ,$c * $weights[$c] }          # weighted lottery
+  $cat = Get-Random -InputObject @($bag | % { $_ })
+  $n = if ($j -and $null -ne $j."ci_$cat") { [int]$j."ci_$cat" } else { 0 }
+  $key = $cats[$cat][$n % $cats[$cat].Count]
+  if (-not $Gallery) { Save-State @{ lastCat = $cat; "ci_$cat" = $n + 1 } }
+  $exercises | ? { $_.k -eq $key } | Select-Object -First 1
+}
 # Re-read before writing and touch only the given fields, so the popup/tray/gallery never clobber each other.
 function Save-State($changes, [switch]$AddDone) {
   $cur = @{}
@@ -43,7 +60,53 @@ function Save-State($changes, [switch]$AddDone) {
   if ($changes) { foreach ($k in $changes.Keys) { $cur[$k] = $changes[$k] } }
   $cur | ConvertTo-Json | Set-Content $state -Encoding utf8
 }
-if (-not $Demo -and -not $Gallery) { Save-State @{ idx = ($st.idx + 1) % $exercises.Count } }
+$ex = if ($Demo) { $exercises | ? { $_.k -eq $Demo } | Select-Object -First 1 }
+      elseif ($Gallery) { $exercises[0] }
+      else { Select-Exercise }
+if (-not $ex) { return }   # every reminder type switched off: nothing to show
+
+# ============ SOUNDS ============
+# Short, quiet, synthesized (no audio files to license). Built once into sounds\<kind>.wav, then just played.
+$SR = 22050
+function Add-Note($buf, $t0, $f, $dur, $vol, $f2 = $f, $decay = 7, $harm = 0.2) {   # plucky sine (+ optional pitch glide)
+  $n0 = [int]($t0 * $SR); $n = [int]($dur * $SR); $ph = 0.0
+  for ($i = 0; $i -lt $n -and ($n0 + $i) -lt $buf.Length; $i++) {
+    $ph += 2 * [math]::PI * ($f + ($f2 - $f) * $i / $n) / $SR
+    $env = [math]::Exp(-$decay * $i / $SR) * [math]::Min(1, $i / 120.0) * [math]::Min(1, ($n - $i) / 300.0)
+    $buf[$n0 + $i] += $vol * $env * ([math]::Sin($ph) + $harm * [math]::Sin(2 * $ph)) } }
+function Add-Splash($buf, $t0, $dur, $vol) {   # soft low-passed noise = a little water splash
+  $n0 = [int]($t0 * $SR); $lp = 0.0; $rnd = New-Object Random 7
+  for ($i = 0; $i -lt [int]($dur * $SR); $i++) { $lp += 0.07 * ($rnd.NextDouble() - 0.5 - $lp)
+    $buf[$n0 + $i] += $vol * $lp * [math]::Exp(-6 * $i / $SR) * [math]::Min(1, $i / 400.0) } }
+$recipes = @{
+  water    = { param($b) Add-Splash $b 0 0.45 1.2; Add-Note $b 0.03 650 0.09 0.20 1500 30; Add-Note $b 0.17 820 0.08 0.14 1700 30; Add-Note $b 0.33 700 0.08 0.10 1600 30 }
+  stretch  = { param($b) Add-Note $b 0 220 0.6 0.13 520 1.5 0.1; Add-Note $b 0.56 990 0.15 0.07 990 25 }          # stretchy glide + pop
+  move     = { param($b) Add-Note $b 0 392 0.35 0.15 392 9; Add-Note $b 0.13 523 0.45 0.15 523 8 }                 # two marimba notes up
+  calm     = { param($b) Add-Note $b 0 660 1.0 0.10 660 3.5 0; Add-Note $b 0 990 0.9 0.05 990 4 0 }                 # soft bell
+  done     = { param($b) Add-Note $b 0 659 0.4 0.12 659 8; Add-Note $b 0.12 880 0.6 0.12 880 6 }
+  hanukkah = { param($b) $t = 0; foreach ($nt in @(392,0.16),@(330,0.16),@(392,0.16),@(330,0.16),@(330,0.16),@(330,0.4)) {   # festive "sevivon"-style jingle
+                 Add-Note $b $t $nt[0] ($nt[1] + 0.25) 0.12 $nt[0] 7; $t += $nt[1] } }
+  thanksgiving = { param($b) $t = 0; foreach ($f in 262, 330, 392, 523) { Add-Note $b $t $f 0.6 0.11 $f 6; $t += 0.11 }   # warm harvest arpeggio
+                   Add-Note $b 0.5 1047 0.8 0.05 1047 4 0 }                                                              # + little dinner bell
+}
+function Get-Sound($kind) {
+  $f = Join-Path $dir "sounds\$kind.wav"
+  if ($MakeSounds -or -not (Test-Path $f)) {
+    New-Item -ItemType Directory -Force (Split-Path $f) | Out-Null
+    $buf = New-Object double[] ([int]($SR * 1.6)); & $recipes[$kind] $buf
+    $last = $buf.Length - 1; while ($last -gt 0 -and [math]::Abs($buf[$last]) -lt 0.0005) { $last-- }   # trim silence
+    $bw = New-Object IO.BinaryWriter ([IO.File]::Create($f)); $n = $last + 1
+    $bw.Write([Text.Encoding]::ASCII.GetBytes('RIFF')); $bw.Write([int](36 + 2*$n)); $bw.Write([Text.Encoding]::ASCII.GetBytes('WAVEfmt '))
+    $bw.Write([int]16); $bw.Write([int16]1); $bw.Write([int16]1); $bw.Write([int]$SR); $bw.Write([int](2*$SR)); $bw.Write([int16]2); $bw.Write([int16]16)
+    $bw.Write([Text.Encoding]::ASCII.GetBytes('data')); $bw.Write([int](2*$n))
+    for ($i = 0; $i -lt $n; $i++) { $bw.Write([int16]([math]::Max(-1, [math]::Min(1, $buf[$i])) * 32000)) }
+    $bw.Close() }
+  $f }
+$script:muted = [bool]($j -and $j.mute)
+function Play-Sound($kind) {
+  if ($Snap -or $script:muted) { return }
+  try { $script:player = New-Object Media.SoundPlayer (Get-Sound $kind); $script:player.Play() } catch {} }
+if ($MakeSounds) { $recipes.Keys | % { Get-Sound $_ | Out-Null }; "built: $($recipes.Keys -join ', ')"; return }
 
 # ============ THE CAST ============
 # Each body: g = outline geometry (inside ~14..96 x 10..134), c = 3-stop fill gradient, d = surface detail drawn on top
@@ -112,20 +175,68 @@ $cast = @(
        "<Rectangle Canvas.Left='51.5' Canvas.Top='12' Width='7' Height='27' Fill='#4A90D9' Stroke='$INK' StrokeThickness='1.5'/>" +
        "<Canvas><Canvas.RenderTransform><ScaleTransform x:Name='{P}Flames' CenterY='24'/></Canvas.RenderTransform>" +
        (((12,22,32,42,64,74,84,94) | % { "<Ellipse Canvas.Left='$($_-3)' Canvas.Top='14' Width='7' Height='10' Fill='#FFB020'/><Ellipse Canvas.Left='$($_-1.5)' Canvas.Top='18' Width='4' Height='5' Fill='#FFF1A8'/>" }) -join '') +
-       "<Ellipse Canvas.Left='51.5' Canvas.Top='2' Width='7' Height='10' Fill='#FFB020'/><Ellipse Canvas.Left='53' Canvas.Top='6' Width='4' Height='5' Fill='#FFF1A8'/></Canvas>" }
+       "<Ellipse Canvas.Left='51.5' Canvas.Top='2' Width='7' Height='10' Fill='#FFB020'/><Ellipse Canvas.Left='53' Canvas.Top='6' Width='4' Height='5' Fill='#FFF1A8'/></Canvas>" },
+  @{ kit='hanukkah'; ax=8; c='#3E7CC9','#8CC0F0','#3570B8'   # 11 single Hanukkah candle, flickering flame
+     g='<RectangleGeometry Rect="32,34,46,98" RadiusX="7" RadiusY="7"/>'
+     d=(((44,64,84,104,124) | % { "<Path Data='M 33,$($_) L 77,$($_-14)' Stroke='#F4F8FF' StrokeThickness='5' Opacity='0.85'/>" }) -join '') +
+       "<Path Data='M 34,40 Q 34,32 44,32 L 66,32 Q 76,32 76,40 L 76,48 Q 72,54 70,46 Q 66,40 62,50 Q 58,56 56,44 L 40,44 Q 36,52 34,46 Z' Fill='#F4F8FF' Stroke='$INK' StrokeThickness='2'/>" +
+       "<Line X1='55' Y1='32' X2='55' Y2='22' Stroke='$INK' StrokeThickness='2.5'/>" +
+       "<Canvas><Canvas.RenderTransform><ScaleTransform x:Name='{P}Flames' CenterX='55' CenterY='24'/></Canvas.RenderTransform>" +
+       "<Path Data='M 55,2 Q 66,14 60,22 Q 55,27 50,22 Q 44,14 55,2 Z' Fill='#FFB020' Stroke='$INK' StrokeThickness='1.5'/><Path Data='M 55,10 Q 60,16 57,21 Q 55,23 53,21 Q 50,16 55,10 Z' Fill='#FFF1A8'/></Canvas>" },
+  @{ kit='thanksgiving'; c='#E06A22','#F79A48','#D25E1C'   # 12 pumpkin: ribs, stem, curly vine
+     g='<EllipseGeometry Center="55,88" RadiusX="47" RadiusY="40"/>'
+     d='<Path Data="M 36,52 Q 22,88 36,124 M 74,52 Q 88,88 74,124 M 22,62 Q 8,88 22,114 M 88,62 Q 102,88 88,114" Stroke="#C9561A" StrokeThickness="3"/>' +
+       "<Path Data='M 50,50 L 52,34 Q 55,30 60,33 L 61,50 Z' Fill='#6B8E23' Stroke='$INK' StrokeThickness='2.5' StrokeLineJoin='Round'/>" +
+       "<Path Data='M 60,38 C 70,30 78,40 72,44 C 68,47 66,40 70,39' Stroke='#4F7A1F' StrokeThickness='2.5' StrokeEndLineCap='Round'/>" +
+       "<Path Data='M 62,42 Q 76,36 84,44 Q 74,48 62,42 Z' Fill='#7FA83A' Stroke='$INK' StrokeThickness='2'/>" },
+  @{ kit='thanksgiving'; c='#8A5530','#B27A4A','#7A4A28'   # 13 turkey: fanned tail feathers behind, red wattle
+     back=(((-70,-40,-12,12,40,70) | % { $col = @('#D9452B','#F08A24','#F6C243','#F6C243','#F08A24','#D9452B')[[array]::IndexOf(@(-70,-40,-12,12,40,70), $_)]
+            "<Ellipse Canvas.Left='43' Canvas.Top='6' Width='24' Height='70' Fill='$col' Stroke='$INK' StrokeThickness='3'><Ellipse.RenderTransform><RotateTransform Angle='$_' CenterX='12' CenterY='68'/></Ellipse.RenderTransform></Ellipse>" }) -join '')
+     g='<EllipseGeometry Center="55,90" RadiusX="38" RadiusY="40"/>'
+     mouth='beak'
+     d='<Path Data="M 30,100 Q 40,112 55,108 Q 70,112 80,100" Stroke="#6E4224" StrokeThickness="2.5"/>' },
+  @{ kit='thanksgiving'; ax=6; c='#E8B820','#F9DE6A','#DCA818'   # 14 corn cob with husk leaves
+     back="<Path Data='M 55,130 Q 14,110 22,40 Q 36,90 55,118 Z' Fill='#8DBB4C' Stroke='$INK' StrokeThickness='3' StrokeLineJoin='Round'/><Path Data='M 55,130 Q 96,110 88,40 Q 74,90 55,118 Z' Fill='#7BAA3C' Stroke='$INK' StrokeThickness='3' StrokeLineJoin='Round'/>"
+     g='<PathGeometry Figures="M 55,16 C 80,16 82,50 82,80 C 82,112 72,128 55,128 C 38,128 28,112 28,80 C 28,50 30,16 55,16 Z"/>'
+     d=(((24,34,44,92,102,112) | % { $y = $_; ((36,46,56,66) | % { "<Ellipse Canvas.Left='$_' Canvas.Top='$y' Width='8' Height='7' Fill='#F6CF45' Stroke='#C99A12' StrokeThickness='1'/>" }) -join '' }) -join '') },
+  @{ kit='thanksgiving'; c='#D8752A','#F0A050','#CC6A22'   # 15 pumpkin pie with crust rim and whipped cream
+     g='<RectangleGeometry Rect="12,46,86,82" RadiusX="22" RadiusY="22"/>'
+     d="<Path Data='M 14,62 Q 20,50 28,58 Q 36,48 44,58 Q 52,48 60,58 Q 68,48 76,58 Q 84,48 90,58 Q 96,52 96,62 L 96,68 L 14,68 Z' Fill='#D9A45C' Stroke='$INK' StrokeThickness='2.5' StrokeLineJoin='Round'/>" +
+       "<Rectangle Canvas.Left='14' Canvas.Top='104' Width='82' Height='10' Fill='#D9A45C'/>" +
+       "<Path Data='M 40,46 Q 38,34 48,34 Q 50,22 60,28 Q 70,26 70,38 Q 76,44 68,48 L 42,48 Q 36,48 40,46 Z' Fill='White' Stroke='$INK' StrokeThickness='2.5' StrokeLineJoin='Round'/>" }
 )
 
 # ---- CHARACTER PACKS: every folder in .\packs with a pack.json adds a kit (see packs\README.md) ----
+# Packs can come from anyone, and XAML can be abused (e.g. ObjectDataProvider runs code), so everything is checked:
+# shapes may only use drawing elements/attributes, no markup extensions; colors are hex; images stay inside the pack.
+$okEl   = 'Canvas','Ellipse','Rectangle','Path','Line','Polygon','Polyline','TextBlock','RotateTransform','ScaleTransform','TranslateTransform','TransformGroup',
+          'Ellipse.RenderTransform','Rectangle.RenderTransform','Path.RenderTransform','Canvas.RenderTransform','TextBlock.RenderTransform'
+$okAttr = 'Canvas.Left','Canvas.Top','Width','Height','Fill','Stroke','StrokeThickness','StrokeDashArray','StrokeLineJoin','StrokeStartLineCap','StrokeEndLineCap',
+          'Opacity','Data','Points','X1','Y1','X2','Y2','RadiusX','RadiusY','Angle','CenterX','CenterY','ScaleX','ScaleY','X','Y','Text','FontSize','FontWeight','Foreground'
+function Test-SafeXaml($x) {
+  if (-not $x) { return $true }
+  try { $doc = [xml]"<r>$x</r>" } catch { return $false }
+  foreach ($n in $doc.SelectNodes('//*')) { if ($n.Name -eq 'r') { continue }
+    if ($n.Name -notin $okEl) { return $false }
+    foreach ($a in $n.Attributes) { if ($a.Name -notin $okAttr -or $a.Value -match '\{') { return $false } } }
+  $true }
 foreach ($pj in Get-ChildItem (Join-Path $dir 'packs') -Filter pack.json -Recurse -ErrorAction SilentlyContinue) {
   try { $pk = Get-Content $pj.FullName -Raw -Encoding UTF8 | ConvertFrom-Json } catch { continue }   # skip broken packs
+  $kitId = "$($pk.kit)" -replace '[^A-Za-z0-9_-]', ''
+  if (-not $kitId) { continue }
   foreach ($ch in $pk.characters) {
-    $e = @{ kit = "$($pk.kit)"; kitNames = $pk.names; names = $ch.names; ax = [int]$ch.ax
+    $e = @{ kit = $kitId; kitNames = $pk.names; names = $ch.names; ax = [int]$ch.ax
             eyes = $ch.eyes; hands = $ch.hands; mouth = $ch.mouth; noFace = ($ch.face -eq $false) }
-    if ($ch.image) {   # sticker PNG as the body
-      $img = [Security.SecurityElement]::Escape(([Uri](Join-Path $pj.DirectoryName $ch.image)).AbsoluteUri)
+    if ($ch.image) {   # sticker PNG/JPG as the body - must live inside the pack folder
+      $file = [IO.Path]::GetFullPath((Join-Path $pj.DirectoryName $ch.image))
+      if (-not $file.StartsWith($pj.DirectoryName, 'OrdinalIgnoreCase') -or $file -notmatch '\.(png|jpe?g)$' -or -not (Test-Path $file)) { continue }
+      $img = [Security.SecurityElement]::Escape(([Uri]$file).AbsoluteUri)
       $e.image = "<Image Source='$img' Canvas.Left='8' Canvas.Top='8' Width='94' Height='126' Stretch='Uniform'/>"
-    } else {           # vector body: SVG-style path data + 3 colors + optional XAML detail
-      $e.g = "<PathGeometry Figures='$($ch.shape)'/>"; $e.c = @($ch.colors); $e.d = "$($ch.detail)"
+    } else {           # vector body: SVG-style path data + 3 colors + optional XAML detail/back
+      $cols = @($ch.colors)
+      if ("$($ch.shape)" -notmatch '^[0-9MLHVCSQTAZmlhvcsqtaz ,.\-]+$' -or $cols.Count -ne 3 -or ($cols | ? { $_ -notmatch '^#[0-9A-Fa-f]{6,8}$' })) { continue }
+      if (-not (Test-SafeXaml $ch.detail) -or -not (Test-SafeXaml $ch.back)) { continue }
+      $e.g = "<PathGeometry Figures='$($ch.shape)'/>"; $e.c = $cols; $e.d = "$($ch.detail)"; $e.back = "$($ch.back)"
     }
     $cast += $e
   }
@@ -138,7 +249,7 @@ function Get-KitName($kit, $L) { if ($L.kits.$kit) { return $L.kits.$kit }
   if ($kn) { if ($kn.($st.lang)) { $kn.($st.lang) } else { $kn.en } } else { $kit } }
 
 # Character setting ("who" in state.json): an index, "kit:<name>" (random from that kit), or "random" (anyone).
-$whoSet = if ($j -and $j.who) { "$($j.who)" } else { 'kit:hanukkah' }   # default on a fresh install: the Hanukkah kit
+$whoSet = if ($j -and $j.who) { "$($j.who)" } else { 'kit:streetfood' }   # default on a fresh install: Israeli street food
 $whoIdx = if ($Who -ge 0) { $Who % $cast.Count }
           elseif ($whoSet -match '^\d+$') { [int]$whoSet % $cast.Count }
           elseif ($whoSet -like 'kit:*') { $pool = @(0..($cast.Count-1) | ? { $cast[$_].kit -eq $whoSet.Substring(4) })
@@ -153,7 +264,7 @@ function New-Noodle($p, $who) {
   $ax = [int]$who.ax
   # body: sticker image, or vector outline (white sticker border + ink outline + gradient fill + detail)
   $bodyX = if ($who.image) { $who.image } else {
-    "<Path Fill='White' Stroke='White' StrokeThickness='14' StrokeLineJoin='Round'><Path.Data>$($who.g)</Path.Data></Path>
+    "$($who.back)<Path Fill='White' Stroke='White' StrokeThickness='14' StrokeLineJoin='Round'><Path.Data>$($who.g)</Path.Data></Path>
      <Path Stroke='$INK' StrokeThickness='3.5' StrokeLineJoin='Round'><Path.Data>$($who.g)</Path.Data>
       <Path.Fill><LinearGradientBrush StartPoint='0,0' EndPoint='1,0'><GradientStop Color='$($who.c[0])' Offset='0'/><GradientStop Color='$($who.c[1])' Offset='0.35'/><GradientStop Color='$($who.c[2])' Offset='1'/></LinearGradientBrush></Path.Fill></Path>
      $($who.d -replace '\{P\}', $p)" }
@@ -164,7 +275,9 @@ function New-Noodle($p, $who) {
      <Ellipse Canvas.Left='48' Canvas.Top='60' Width='2.5' Height='2.5' Fill='White'/><Ellipse Canvas.Left='58' Canvas.Top='59' Width='2.5' Height='2.5' Fill='White'/>" }
     else { "<Ellipse Canvas.Left='43' Canvas.Top='57' Width='9' Height='13' Fill='$INK'/><Ellipse Canvas.Left='46' Canvas.Top='59' Width='3.5' Height='3.5' Fill='White'/>
      <Ellipse Canvas.Left='60' Canvas.Top='57' Width='9' Height='13' Fill='$INK'/><Ellipse Canvas.Left='63' Canvas.Top='59' Width='3.5' Height='3.5' Fill='White'/>" }
-  $mouthX = if ($who.mouth -eq 'lips') {
+  $mouthX = if ($who.mouth -eq 'beak') {   # beak + red wattle
+    "<Path Data='M 61,74 Q 67,78 65,88 Q 63,93 59,88 Q 58,80 61,74 Z' Fill='#D7263D' Stroke='$INK' StrokeThickness='1.8'/><Path Data='M 49,73 L 63,73 L 56,82 Z' Fill='#F2A71B' Stroke='$INK' StrokeThickness='2' StrokeLineJoin='Round'/>" }
+    elseif ($who.mouth -eq 'lips') {
     "<Path Data='M 44,77 Q 56,90 69,75 Q 66,80 56,81 Q 49,81 44,77 Z' Fill='#D7263D' Stroke='$INK' StrokeThickness='1.8' StrokeLineJoin='Round'/>" }
     else { "<Path Data='M 48,75 L 64,75 Q 63,86 56,86 Q 49,86 48,75 Z' Fill='$INK'/><Path Data='M 51.5,82 Q 56,78.5 60.5,82 Q 58.5,85 56,85 Q 53.5,85 51.5,82 Z' Fill='#E86A6A'/>" }
   $faceVis = if ($who.noFace) { 'Collapsed' } else { 'Visible' }
@@ -304,7 +417,8 @@ if ($Gallery) {
   $dice = { param($c) "<Viewbox><TextBlock Text='?' FontSize='90' FontWeight='Bold' Foreground='$c'/></Viewbox>" }
   $section = { param($title, $row) "<StackPanel Margin='0,8,18,0'><TextBlock Text='$(& $esc $title)' FontSize='15' FontWeight='Bold' Foreground='#1A1A1A' Margin='4,0,0,2'/><WrapPanel>$row</WrapPanel></StackPanel>" }
   $body = & $section ' ' (Tile 'random' (& $dice '#D9541E') $L.ui.random)
-  $kits = @('hanukkah', 'streetfood') + @($cast | % { $_.kit } | Select-Object -Unique | ? { $_ -notin 'hanukkah','streetfood' })   # default kit first
+  $first = 'streetfood', 'hanukkah', 'thanksgiving'   # default kit first
+  $kits = @($first) + @($cast | % { $_.kit } | Select-Object -Unique | ? { $_ -notin $first })
   foreach ($kit in $kits) {     # one section per kit
     $kname = Get-KitName $kit $L
     $row = Tile "kit:$kit" (& $dice '#C2A15A') ($L.ui.randomKit -f $kname)
@@ -394,6 +508,10 @@ $pill = @'
     </Border>
    </Grid>
   </Border>
+  <!-- close (x): top corner of whichever card is showing -->
+  <Border x:Name="CloseX" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,7,8,0" Width="20" Height="20" CornerRadius="10" Background="Transparent" Cursor="Hand" ToolTip="Close">
+   <TextBlock Text="&#x2715;" FontSize="11" Foreground="#9A9189" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+  </Border>
  </Grid>
 </Window>
 "@
@@ -419,7 +537,8 @@ function Set-Lang($code) {
   if ($script:running) { $Primary.Content = $L.ui.done; $Secondary.Content = $L.ui.stop; $Time.Text = $L.ui.left -f (Format-Secs $script:left) }
   else { $Primary.Content = $L.ui.start; $Secondary.Content = $L.ui.snooze; $Time.Text = Format-Secs $ex.s }
   if ($script:doneShown) { $Time.Text = $L.ui.nice }
-  foreach ($m in $win.ContextMenu.Items) { $m.IsChecked = ($m.Tag -eq $code) }
+  foreach ($m in $win.ContextMenu.Items) { if ($m -is [System.Windows.Controls.MenuItem]) {
+    if ($m.Tag -eq 'mute') { $m.Header = $L.ui.mute; $m.IsChecked = $script:muted } else { $m.IsChecked = ($m.Tag -eq $code) } } }
 }
 
 # Right-click -> language menu (every language in i18n.json shows up automatically)
@@ -429,6 +548,10 @@ foreach ($code in $I.psobject.Properties.Name) {
   $mi.Add_Click({ param($s, $e) $st.lang = $s.Tag; Save-State @{ lang = $s.Tag }; Set-Lang $s.Tag })
   [void]$win.ContextMenu.Items.Add($mi)
 }
+[void]$win.ContextMenu.Items.Add((New-Object System.Windows.Controls.Separator))
+$muteItem = New-Object System.Windows.Controls.MenuItem -Property @{ Tag='mute'; IsCheckable=$true }
+$muteItem.Add_Click({ param($s, $e) $script:muted = $s.IsChecked; Save-State @{ mute = $s.IsChecked } })
+[void]$win.ContextMenu.Items.Add($muteItem)
 Set-Lang $st.lang
 
 # --- position: anchor bottom-right corner where you last dragged it, else bottom-right of main screen.
@@ -446,7 +569,11 @@ $win.Add_SizeChanged({ Set-Corner })
 $win.Add_MouseLeftButtonDown({ $win.DragMove()
   $st.right = $win.Left + $win.ActualWidth; $st.bottom = $win.Top + $win.ActualHeight
   Save-State @{ right = $st.right; bottom = $st.bottom } })
-$win.Add_Loaded({ Set-Corner; Alive T; Wave T; if (-not $Snap) { [System.Media.SystemSounds]::Asterisk.Play() } })
+# sound: festive kits have their own tune; otherwise it matches the reminder (water drops, stretchy glide, ...)
+$soundKind = if ($cast[$whoIdx].kit -in 'hanukkah', 'thanksgiving') { $cast[$whoIdx].kit }
+             else { @{ drink='water'; stretch='stretch'; eyes='calm'; breathe='calm' }[$ex.w] }
+if (-not $soundKind) { $soundKind = 'move' }
+$win.Add_Loaded({ Set-Corner; Alive T; Wave T; Play-Sound $soundKind })
 
 # toast -> card after 2.5s (click toast to skip); the card's character starts its demo
 $intro = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromSeconds(2.5) }
@@ -458,6 +585,9 @@ $intro.Add_Tick($showCard); $Toast.Add_MouseLeftButtonDown($showCard); $intro.St
 $idle = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromMinutes(3) }
 $idle.Add_Tick({ $win.Close() }); $idle.Start()
 
+$CloseX = $win.FindName('CloseX')
+$CloseX.Add_MouseEnter({ $CloseX.Background = '#EEE9E2' }); $CloseX.Add_MouseLeave({ $CloseX.Background = 'Transparent' })
+$CloseX.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $win.Close() })   # Handled: don't start a drag
 $How.Add_MouseLeftButtonDown({ $HowText.Visibility = if ($HowText.Visibility -eq 'Visible') {'Collapsed'} else {'Visible'} })
 
 $tick = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromSeconds(1) }
@@ -465,7 +595,7 @@ function Complete-Exercise { Save-State -AddDone; $win.Close() }
 $tick.Add_Tick({
   $script:left--
   $Bar.Width = ($Card.ActualWidth) * (1 - $script:left / $ex.s)
-  if ($script:left -le 0) { $tick.Stop(); [System.Media.SystemSounds]::Exclamation.Play()
+  if ($script:left -le 0) { $tick.Stop(); Play-Sound done
     $script:doneShown = $true; Set-Lang $st.lang
     $end = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromSeconds(2) }
     $end.Add_Tick({ Complete-Exercise }); $end.Start()
