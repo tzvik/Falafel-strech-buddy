@@ -260,9 +260,12 @@ $whoSet = if ($j -and $j.who) { "$($j.who)" } else { 'kit:streetfood' }   # defa
 $whoIdx = if ($Who -ge 0) { $Who % $cast.Count }
           elseif ($whoSet -match '^\d+$') { [int]$whoSet % $cast.Count }
           elseif ($whoSet -like 'pack:*' -and ($hit = @(0..($cast.Count-1) | ? { $cast[$_].id -eq $whoSet }))) { $hit[0] }
-          elseif ($whoSet -like 'kit:*') { $pool = @(0..($cast.Count-1) | ? { $cast[$_].kit -eq $whoSet.Substring(4) })
-                                          if ($pool) { Get-Random -InputObject $pool } else { Get-Random -Maximum $cast.Count } }
-          else { Get-Random -Maximum $cast.Count }
+          else {   # "rotating": a different character each time (never the same one twice in a row)
+            $pool = if ($whoSet -like 'kit:*') { @(0..($cast.Count-1) | ? { $cast[$_].kit -eq $whoSet.Substring(4) }) } else { @() }
+            if (-not $pool) { $pool = @(0..($cast.Count-1)) }
+            $fresh = @($pool | ? { "$_" -ne "$($j.lastWho)" }); if ($fresh) { $pool = $fresh }
+            Get-Random -InputObject $pool }
+if (-not $Demo -and -not $Gallery -and -not $Snap) { Save-State @{ lastWho = $whoIdx } }
 
 # ============ THE RIG ============
 # Canvas 110x160. Jointed limbs: upper arm rotates at the shoulder, forearm at the elbow; thigh at the hip, shin at the knee.
@@ -372,12 +375,15 @@ function Sit($p) {     # seated on a chair, legs bent toward the viewer's right 
 function Wave($p) { M "${p}RArmU" A @(-140,-140) 1; M "${p}RArmF" A @(-30,15,-30) .9 }
 $moves = @{
   thoracic  = { Sit C; M CLArmU A @(150,150) 1; M CLArmF A @(100,100) 1; M CRArmU A @(-150,-150) 1; M CRArmF A @(-100,-100) 1   # hands behind head
-                M CUpR A @(0,-12,-12,0) 3; M CFaceT Y @(0,-4,-4,0) 3 }                                                            # arch back over the chair
+                M CUpR A @(0,-12,-12,0) 3; M CFaceT Y @(0,-4,-4,0) 3                                                              # arch back over the chair
+                $win.FindName('SideHint').Visibility = 'Visible'; $win.FindName('BackHint').Visibility = 'Visible'
+                M HintTorso A @(0,-24,-24,0) 3 }                                                                                  # side view: lean back over the chair top
   drink     = { Sit C; $win.FindName('CGlass').Visibility = 'Visible'
                 M CRArmU A @(0,30,30,30,0) 3.5; M CRArmF A @(0,78,78,78,0) 3.5; M CFaceT Y @(0,0,-2,-2,0) 3.5 }                    # glass to mouth, sip
   drink2    = { & $moves.drink }
-  chin      = { Sit C; M CFaceS SX @(1,.86,.86,1) 2.5; M CFaceS SY @(1,.86,.86,1) 2.5; M CFaceT Y @(0,4,4,0) 2.5
-                M CRArmU A @(0,25,25,0) 2.5; M CRArmF A @(0,95,95,0) 2.5 }                                                        # finger pushes chin back
+  chin      = { Sit C; M CFaceS SX @(1,.88,.88,1) 2.5; M CFaceS SY @(1,.88,.88,1) 2.5; M CFaceT Y @(0,3,3,0) 2.5            # face pulls back
+                $win.FindName('SideHint').Visibility = 'Visible'; $win.FindName('ChinHint').Visibility = 'Visible'
+                M HintHead X @(0,-7,-7,0) 2.5 }                                                                                   # side view: head slides straight back
   neck      = { Sit C; M CUpR A @(0,-16,-16,0,16,16,0) 6
                 M CLArmU A @(0,0,0,0,160,160,0) 6; M CLArmF A @(0,0,0,0,70,70,0) 6
                 M CRArmU A @(0,-160,-160,0,0,0,0) 6; M CRArmF A @(0,-70,-70,0,0,0,0) 6 }                                        # tilt + hand over head
@@ -403,8 +409,7 @@ $moves = @{
 # Motion arrows: small orange arrows that pulse in the direction to move. @(x, y, angle) in rig coordinates
 # (110x162 box; angle 0 = right, 90 = down, 180 = left, -90 = up).
 $arrowsFor = @{
-  chin      = @(,@(98,62,180))                         # head straight back
-  neck      = @(@(12,20,135), @(98,20,45))             # tilt ear to shoulder, each side
+  neck     = @(@(12,20,135), @(98,20,45))             # tilt ear to shoulder, each side
   thoracic  = @(,@(92,26,-120))                        # arch up and back
   shoulders = @(@(8,66,-90), @(102,66,-90))            # shrug up
   twist     = @(@(4,92,180), @(106,92,0))              # turn each way
@@ -420,9 +425,11 @@ $arrowsFor.drink2 = $arrowsFor.drink
 $showArrows = {
   $layer = $win.FindName('CArrows'); if (-not $layer) { return }
   foreach ($a in $arrowsFor[$ex.k]) {
-    $pth = New-Object System.Windows.Shapes.Path -Property @{ Stroke = '#E8662A'; StrokeThickness = 3.2
+    $pth = New-Object System.Windows.Controls.Canvas   # white outline under orange: visible on any character
+    foreach ($st2 in @('White', 7.5), @('#E8662A', 3.4)) {
+      [void]$pth.Children.Add((New-Object System.Windows.Shapes.Path -Property @{ Stroke = $st2[0]; StrokeThickness = $st2[1]
              StrokeStartLineCap = 'Round'; StrokeEndLineCap = 'Round'; StrokeLineJoin = 'Round'
-             Data = [System.Windows.Media.Geometry]::Parse('M -7,0 L 7,0 M 2,-5 L 7,0 L 2,5') }
+             Data = [System.Windows.Media.Geometry]::Parse('M -8,0 L 8,0 M 2,-6 L 8,0 L 2,6') })) }
     [System.Windows.Controls.Canvas]::SetLeft($pth, $a[0]); [System.Windows.Controls.Canvas]::SetTop($pth, $a[1])
     $tt = New-Object System.Windows.Media.TranslateTransform
     $tg = New-Object System.Windows.Media.TransformGroup
@@ -473,7 +480,10 @@ if ($Gallery) {
     <Path Data='M 10,22 L 26,22 C 48,22 52,64 74,64 L 82,64' Stroke='$c' StrokeThickness='11' StrokeStartLineCap='Round' StrokeEndLineCap='Round'/>
     <Path Data='M 80,50 L 96,64 L 80,78 Z' Fill='$c' Stroke='$c' StrokeThickness='6' StrokeLineJoin='Round'/>
   </Canvas></Viewbox>" }
-  $section = { param($title, $row) "<StackPanel Margin='0,8,18,0'><TextBlock Text='$(& $esc $title)' FontSize='15' FontWeight='Bold' Foreground='#1A1A1A' Margin='4,0,0,2'/><WrapPanel>$row</WrapPanel></StackPanel>" }
+  # one full-width row per section, so every category header lines up
+  $section = { param($title, $row)
+    $hdr = if ($title) { "<TextBlock Text='$(& $esc $title)' FontSize='15' FontWeight='Bold' Foreground='#1A1A1A' Margin='4,0,0,2'/>" } else { '' }
+    "<StackPanel Margin='0,8,0,0'>$hdr<WrapPanel>$row</WrapPanel></StackPanel>" }
   # "feeling lucky" (anyone at all) = two tumbling dice; per-kit random = shuffle arrows
   $pips = { param($pts) ($pts | % { "<Ellipse Canvas.Left='$($_[0]-5)' Canvas.Top='$($_[1]-5)' Width='10' Height='10' Fill='$INK'/>" }) -join '' }
   $lucky = "<Viewbox Margin='8'><Canvas Width='110' Height='110'>
@@ -486,7 +496,7 @@ if ($Gallery) {
       <Rectangle Canvas.Left='74' Canvas.Top='53' Width='23' Height='46' Fill='#C4D5EE'/>
       $(& $pips (@(63,65),@(85,65),@(63,87),@(85,87)))</Canvas>
   </Canvas></Viewbox>"
-  $body = & $section ' ' (Tile 'random' $lucky $L.ui.random)
+  $body = & $section '' (Tile 'random' $lucky $L.ui.random)   # "feeling lucky" sits alone on the first row
   $first = 'streetfood', 'hanukkah', 'thanksgiving'   # default kit first
   $kits = @($first) + @($cast | % { $_.kit } | Select-Object -Unique | ? { $_ -notin $first })
   foreach ($kit in $kits) {     # one section per kit
@@ -506,7 +516,7 @@ if ($Gallery) {
   <TextBlock Text="$([Security.SecurityElement]::Escape($L.ui.castKicker))" FontSize="11" FontWeight="Bold" Foreground="#C2410C"/>
   <TextBlock Text="$([Security.SecurityElement]::Escape($L.ui.castTitle))" FontSize="30" FontWeight="Bold" Foreground="#1A1A1A"/>
   <TextBlock Text="$([Security.SecurityElement]::Escape($L.ui.castSub))" FontSize="13" Foreground="#666" Margin="0,2,0,12"/>
-  <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="700"><WrapPanel Width="1180">$tiles</WrapPanel></ScrollViewer>
+  <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="700"><StackPanel Width="950">$tiles</StackPanel></ScrollViewer>
  </StackPanel>
 </Window>
 "@
@@ -554,7 +564,38 @@ $pill = @'
    <Grid>
     <Grid Margin="12">
      <Grid.ColumnDefinitions><ColumnDefinition Width="120"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-     <Border Background="#F1EBE2" CornerRadius="14" Padding="8" Height="136" VerticalAlignment="Top">$(New-Noodle 'C' $cast[$whoIdx])</Border>
+     <Border Background="#F1EBE2" CornerRadius="14" Padding="8" Height="136" VerticalAlignment="Top"><Grid>$(New-Noodle 'C' $cast[$whoIdx])
+      <!-- side-view hint: for moves a front view can't show (head back, lean back) -->
+      <Border x:Name="SideHint" Visibility="Collapsed" Width="64" Height="64" CornerRadius="32" Background="White" BorderBrush="#E0D8CE" BorderThickness="1.5"
+              HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-6,-6" ToolTip="Side view">
+       <Border.Effect><DropShadowEffect BlurRadius="5" ShadowDepth="1" Opacity="0.2"/></Border.Effect>
+       <Viewbox Margin="5"><Grid Width="60" Height="60">
+        <Canvas x:Name="ChinHint" Visibility="Collapsed">
+         <Path Data="M 12,60 Q 14,46 24,42 L 40,42 Q 50,46 50,60 Z" Fill="#F5BE52" Stroke="$INK" StrokeThickness="2"/>
+         <Rectangle Canvas.Left="28" Canvas.Top="30" Width="9" Height="14" Fill="#F5BE52" Stroke="$INK" StrokeThickness="2"/>
+         <Ellipse Canvas.Left="23" Canvas.Top="10" Width="24" Height="24" Stroke="#B0A79C" StrokeThickness="1.5" StrokeDashArray="2 2"/>
+         <Canvas><Canvas.RenderTransform><TranslateTransform x:Name="HintHead"/></Canvas.RenderTransform>
+          <Ellipse Canvas.Left="23" Canvas.Top="10" Width="24" Height="24" Fill="#F5BE52" Stroke="$INK" StrokeThickness="2"/>
+          <Ellipse Canvas.Left="44" Canvas.Top="18" Width="6" Height="6" Fill="#F5BE52" Stroke="$INK" StrokeThickness="1.6"/>
+          <Ellipse Canvas.Left="38" Canvas.Top="17" Width="3.5" Height="4.5" Fill="$INK"/>
+         </Canvas>
+         <Path Data="M 46,5 L 24,5 M 30,0 L 24,5 L 30,10" Stroke="White" StrokeThickness="6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+         <Path Data="M 46,5 L 24,5 M 30,0 L 24,5 L 30,10" Stroke="#E8662A" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+        </Canvas>
+        <Canvas x:Name="BackHint" Visibility="Collapsed">
+         <Path Data="M 12,22 L 12,58 M 12,44 L 42,44 M 40,44 L 40,58" Stroke="#9C9A96" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+         <Path Data="M 22,44 L 40,44 L 42,58" Stroke="$INK" StrokeThickness="4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+         <Canvas><Canvas.RenderTransform><RotateTransform x:Name="HintTorso" CenterX="22" CenterY="44"/></Canvas.RenderTransform>
+          <Line X1="22" Y1="44" X2="22" Y2="20" Stroke="#F5BE52" StrokeThickness="9" StrokeStartLineCap="Round"/>
+          <Line X1="22" Y1="44" X2="22" Y2="20" Stroke="$INK" StrokeThickness="1.5" Opacity="0.4"/>
+          <Ellipse Canvas.Left="14" Canvas.Top="4" Width="16" Height="16" Fill="#F5BE52" Stroke="$INK" StrokeThickness="2"/>
+          <Path Data="M 22,24 L 34,16 L 27,8" Stroke="$INK" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+         </Canvas>
+         <Path Data="M 44,10 Q 36,0 24,0" Stroke="White" StrokeThickness="6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+         <Path Data="M 44,10 Q 36,0 24,0 M 29,-4 L 24,0 L 29,5" Stroke="#E8662A" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+        </Canvas>
+       </Grid></Viewbox>
+      </Border></Grid></Border>
      <StackPanel Grid.Column="1" Margin="14,2,4,0">
       <DockPanel>
        <TextBlock x:Name="Count" DockPanel.Dock="Right" FontSize="12" Foreground="#888" VerticalAlignment="Center"/>
