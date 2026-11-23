@@ -32,10 +32,12 @@ No admin rights needed. It installs for your user only, starts with Windows, and
 - **Start** runs a countdown. Finish and you get a green "Nice! That's 3 today", a happy character, and
   now and then a burst of **confetti**.
 - **Snooze** brings it back in 5 minutes; **✕** or ignoring it closes it quietly.
-- 16 exercises: upper-back stretch, chin tucks, neck stretch, shoulder rolls, seated twist, wrist & finger stretch,
-  hand shake-out, eye break (20-20-20), deep breaths, calf raises, stand up, walkaround, water breaks.
+- 19 exercises: upper-back stretch, chin tucks, neck stretch, neck turns, shoulder rolls, arms wide, seated twist,
+  wrist & finger stretch, hand shake-out, eye break (20-20-20), deep breaths, calf raises, stand up,
+  turn around & walk, walkaround, water breaks.
 - Each card is about one thing only, with a matching tip (posture / water / eyes / movement).
-- Gentle sounds that match the reminder: water pouring, a soft creak for stretches, an "ahh" for eye rest.
+- Gentle sounds that match the reminder: water pouring, a soft creak for stretches, a little "level up" for
+  get-up breaks, an "ahh" for eye rest.
 - **Drag** the popup to any screen; it remembers the spot.
 - **Hebrew and English** (right-to-left supported).
 

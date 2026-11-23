@@ -22,7 +22,8 @@ $exercises = @(
   @{ k='neck';     s=40; w='stretch' }, @{ k='walk';    s=120; w='walk' },  @{ k='twist';     s=30;  w='stretch' },
   @{ k='drink';    s=20; w='drink' },   @{ k='breathe'; s=40; w='breathe' }, @{ k='calves';    s=30;  w='move' },
   @{ k='chin';     s=30; w='stretch' }, @{ k='drink2';  s=20; w='drink' },  @{ k='shoulders'; s=30;  w='stretch' },
-  @{ k='shake';    s=15; w='stretch' }
+  @{ k='shake';    s=15; w='stretch' }, @{ k='neckturn'; s=30; w='stretch' }, @{ k='armsout'; s=15; w='stretch' },
+  @{ k='wander';   s=60; w='walk' }
 )
 
 # --- state: next exercise, done-today counter, dragged position, language, character ---
@@ -37,8 +38,8 @@ if (-not $I.($st.lang)) { $st.lang = 'en' }
 # Reminder types (tray > Reminder types): weight 2 = often, 1 = sometimes, 0 = off.
 # Each popup picks a type by weight (never the same type twice in a row if others are on),
 # then the next exercise of that type in turn.
-$cats = [ordered]@{ stretch = 'thoracic','shake','chin','neck','wrists','twist','shoulders'; water = 'drink','drink2'
-                    move = 'stand','walk','calves'; eyes = 'eyes','breathe' }
+$cats = [ordered]@{ stretch = 'thoracic','shake','neckturn','chin','armsout','neck','wrists','twist','shoulders'; water = 'drink','drink2'
+                    move = 'stand','wander','walk','calves'; eyes = 'eyes','breathe' }
 $weights = @{ stretch = 2; water = 2; move = 1; eyes = 1 }
 if ($j -and $j.types) { foreach ($c in @($cats.Keys)) { if ($null -ne $j.types.$c) { $weights[$c] = [int]$j.types.$c } } }
 function Select-Exercise {
@@ -476,6 +477,12 @@ $moves = @{
                 M CLArmU A @(0,40,40,0,0,0,0) 5; M CRArmU A @(0,0,0,0,-40,-40,0) 5 }                                             # turn left, then right
   breathe   = { Sit C; M CUpS SX @(1,1.06,1.06,1) 5; M CUpS SY @(1,1.05,1.05,1) 5
                 M CLArmU A @(0,25,25,0) 5; M CRArmU A @(0,-25,-25,0) 5 }                                                          # in for 4, out for 6
+  neckturn  = { Sit C; M CFaceT X @(0,-9,-9,0,9,9,0) 5; M CFaceS SX @(1,.86,.86,1,.86,.86,1) 5 }                          # look over one shoulder, then the other
+  armsout   = { Sit C; M CLArmU A @(90,90) 1; M CRArmU A @(-90,-90) 1                                                       # arms straight out to the sides
+                M CArmsT X @(0,0) 1; M CLArmF A @(0,-6,0) 2; M CRArmF A @(0,6,0) 2; M CUpS SX @(1,1.04,1) 2 }                 # reach long, chest opens
+  wander    = { M CUpS SX @(1,1,-1,-1,1,1) 6                                                                                  # turn around (and back)
+                M CLLegU A @(-20,20,-20) 1; M CLLegF A @(0,25,0) 1; M CRLegU A @(20,-20,20) 1; M CRLegF A @(25,0,25) 1
+                M CUpT Y @(0,-3,0) .5; M CRigT X @(-10,10,-10) 6 }                                                            # and stroll a few steps
   shake     = { Sit C; M CLArmU A @(20,20) 1; M CRArmU A @(-20,-20) 1                                                       # arms hang loose
                 M CLArmF A @(-22,22,-22) .22; M CRArmF A @(22,-22,22) .22; M CArmsT Y @(0,-2,0) .22 }                         # quick gentle shake
   calves    = { M CRigT Y @(0,-9,-9,0,0) 1.6; M CLLegF A @(0,-8,-8,0,0) 1.6; M CRLegF A @(0,8,8,0,0) 1.6 }                    # up on toes, down
@@ -493,6 +500,9 @@ $arrowsFor = @{
   walk      = @(,@(96,152,0))                          # off you go
   eyes      = @(,@(96,56,0))                           # look far away
   breathe   = @(@(2,96,180), @(108,96,0))              # chest expands
+  neckturn  = @(@(14,44,180), @(96,44,0))              # turn head left / right
+  armsout   = @(@(2,58,180), @(108,58,0))              # reach out wide
+  wander    = @(,@(96,152,0))                          # off you go
 }                                                      # (no arrows for drinking: not a body movement)
 $showArrows = {
   # one arrow per movement: if a side-view bubble explains it, no arrows on the character

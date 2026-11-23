@@ -2,6 +2,6 @@
   "_help": "Per-sound playback for the .mp3 recordings: start = seconds into the file, len = seconds to play (then a short fade), vol = 0..1",
   "water":   { "start": 0,   "len": 2.5, "vol": 0.35 },
   "stretch": { "start": 0,   "len": 1.5, "vol": 0.35 },
-  "move":    { "start": 0,   "len": 2.5, "vol": 0.35 },
+  "move":    { "start": 0,   "len": 1.8, "vol": 0.35 },
   "calm":    { "start": 0,   "len": 2.3, "vol": 0.35 }
 }
