@@ -100,14 +100,23 @@ function Get-Sound($kind) {
     $bw.Write([Text.Encoding]::ASCII.GetBytes('RIFF')); $bw.Write([int](36 + 2*$n)); $bw.Write([Text.Encoding]::ASCII.GetBytes('WAVEfmt '))
     $bw.Write([int]16); $bw.Write([int16]1); $bw.Write([int16]1); $bw.Write([int]$SR); $bw.Write([int](2*$SR)); $bw.Write([int16]2); $bw.Write([int16]16)
     $bw.Write([Text.Encoding]::ASCII.GetBytes('data')); $bw.Write([int](2*$n))
-    for ($i = 0; $i -lt $n; $i++) { $bw.Write([int16]([math]::Max(-1, [math]::Min(1, $buf[$i])) * 32000)) }
+    $peak = ($buf | Measure-Object -Maximum -Minimum); $peak = [math]::Max($peak.Maximum, -$peak.Minimum)
+    $gain = if ($peak -gt 0) { 0.4 / $peak } else { 1 }   # same gentle loudness for every sound (~ -8 dB)
+    for ($i = 0; $i -lt $n; $i++) {   # note: [int16](x) * k casts FIRST - so compute the sample, then cast
+      $smp = [math]::Max(-1.0, [math]::Min(1.0, $buf[$i] * $gain)) * 32000.0
+      $bw.Write([int16]$smp) }
     $bw.Close() }
   $f }
 $script:muted = [bool]($j -and $j.mute)
 function Play-Sound($kind) {
   if ($Snap -or $script:muted) { return }
   try { $script:player = New-Object Media.SoundPlayer (Get-Sound $kind); $script:player.Play() } catch {} }
-if ($MakeSounds) { $recipes.Keys | % { Get-Sound $_ | Out-Null }; "built: $($recipes.Keys -join ', ')"; return }
+if ($MakeSounds) {
+  foreach ($k in $recipes.Keys) {   # build + self-check: a silent file means the writer is broken
+    $b = [IO.File]::ReadAllBytes((Get-Sound $k)); $loud = $false
+    for ($i = 44; $i -lt $b.Length - 1 -and -not $loud; $i += 2) { if ([math]::Abs([BitConverter]::ToInt16($b, $i)) -gt 3000) { $loud = $true } }
+    if ($loud) { "built $k.wav" } else { Write-Warning "$k.wav is SILENT" } }
+  return }
 
 # ============ THE CAST ============
 # Each body: g = outline geometry (inside ~14..96 x 10..134), c = 3-stop fill gradient, d = surface detail drawn on top
@@ -419,9 +428,7 @@ $arrowsFor = @{
   walk      = @(,@(96,152,0))                          # off you go
   eyes      = @(,@(96,56,0))                           # look far away
   breathe   = @(@(2,96,180), @(108,96,0))              # chest expands
-  drink     = @(,@(104,96,-90))                        # glass up
-}
-$arrowsFor.drink2 = $arrowsFor.drink
+}                                                      # (no arrows for drinking: not a body movement)
 $showArrows = {
   $layer = $win.FindName('CArrows'); if (-not $layer) { return }
   foreach ($a in $arrowsFor[$ex.k]) {
