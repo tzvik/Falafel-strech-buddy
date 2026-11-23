@@ -724,10 +724,11 @@ $win.Add_SizeChanged({ Set-Corner })
 $win.Add_MouseLeftButtonDown({ $win.DragMove()
   $st.right = $win.Left + $win.ActualWidth; $st.bottom = $win.Top + $win.ActualHeight
   Save-State @{ right = $st.right; bottom = $st.bottom } })
-# sound: festive kits have their own tune; otherwise it matches the reminder (water drops, stretchy glide, ...)
-$soundKind = if ($cast[$whoIdx].kit -in 'hanukkah', 'thanksgiving') { $cast[$whoIdx].kit }
-             else { @{ drink='water'; stretch='stretch'; eyes='calm'; breathe='calm' }[$ex.w] }
-if (-not $soundKind) { $soundKind = 'move' }
+# sound when the reminder opens: always matches the reminder (water pouring, gentle stretch, soft bell);
+# festive kits play their tune when you FINISH instead of the regular "done" chime
+$soundKind = @{ drink='water'; stretch='stretch'; eyes='calm'; breathe='calm' }[$ex.w]
+if (-not $soundKind) { $soundKind = 'move' }   # stand / walk / move: the gentle stretch family
+$doneKind = if ($cast[$whoIdx].kit -in 'hanukkah', 'thanksgiving') { $cast[$whoIdx].kit } else { 'done' }
 $win.Add_Loaded({ Set-Corner; Alive T; Wave T; Play-Sound $soundKind })
 
 # toast -> card after 2.5s (click toast to skip); the card's character starts its demo
@@ -776,7 +777,7 @@ function Complete-Exercise {
   $script:doneShown = $true; Set-Lang $st.lang
   $Actions.Visibility = 'Collapsed'; $Success.Visibility = 'Visible'
   $Bar.Fill = '#2EA44F'; $Bar.Width = $Card.ActualWidth
-  Play-Sound done
+  Play-Sound $doneKind
   M CLArmU A @(150,175,150) .5; M CRArmU A @(-150,-175,-150) .5; M CLArmF A @(0,0) 1; M CRArmF A @(0,0) 1   # arms up, cheering
   M CRigT Y @(0,-9,0) .5
   $n = $st.count + 1
