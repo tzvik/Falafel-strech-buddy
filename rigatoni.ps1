@@ -508,9 +508,11 @@ $pill = @'
     </Border>
    </Grid>
   </Border>
-  <!-- close (x): top corner of whichever card is showing -->
-  <Border x:Name="CloseX" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8,7,8,0" Width="20" Height="20" CornerRadius="10" Background="Transparent" Cursor="Hand" ToolTip="Close">
-   <TextBlock Text="&#x2715;" FontSize="11" Foreground="#9A9189" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+  <!-- close (x): round badge over the card's corner above the character (left in English, right in Hebrew - follows FlowDirection) -->
+  <Border x:Name="CloseX" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-9,-9,0,0" Width="24" Height="24" CornerRadius="12"
+          Background="White" BorderBrush="#E4DED6" BorderThickness="1" Cursor="Hand" ToolTip="Close">
+   <Border.Effect><DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.25"/></Border.Effect>
+   <TextBlock Text="&#x2715;" FontSize="11" FontWeight="Bold" Foreground="#8A8178" HorizontalAlignment="Center" VerticalAlignment="Center"/>
   </Border>
  </Grid>
 </Window>
@@ -529,9 +531,7 @@ function Format-Secs($s) { if ($s -ge 60) { '{0}:{1:00}' -f [math]::Floor($s/60)
 function Set-Lang($code) {
   $script:L = $I.$code
   $e = $L.ex.($ex.k)
-  $win.FlowDirection = if ($L.rtl) { 'RightToLeft' } else { 'LeftToRight' }
-  $win.FindName('CloseX').HorizontalAlignment = if ($L.rtl) { 'Left' } else { 'Right' }   # x stays on the physical right in every language
-  $TimeTo.Text = $L.ui.timeTo; $Word.Text = $L.ui.($ex.w); $Sub.Text = $L.ui.sub -f (Get-Name $whoIdx $L)
+  $win.FlowDirection = if ($L.rtl) { 'RightToLeft' } else { 'LeftToRight' }  $TimeTo.Text = $L.ui.timeTo; $Word.Text = $L.ui.($ex.w); $Sub.Text = $L.ui.sub -f (Get-Name $whoIdx $L)
   $Title.Text = $e.t; $Desc.Text = $e.d; $Amount.Text = $e.a; $HowText.Text = $e.h; $How.Text = $L.ui.howto
   $Tip.Text = $L.ui.tip -f $L.tips[$tipIdx % $L.tips.Count]
   $Count.Text = $L.ui.today -f ($st.count + [int]$script:doneShown)
@@ -587,7 +587,7 @@ $idle = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interva
 $idle.Add_Tick({ $win.Close() }); $idle.Start()
 
 $CloseX = $win.FindName('CloseX')
-$CloseX.Add_MouseEnter({ $CloseX.Background = '#EEE9E2' }); $CloseX.Add_MouseLeave({ $CloseX.Background = 'Transparent' })
+$CloseX.Add_MouseEnter({ $CloseX.Background = '#F1ECE5' }); $CloseX.Add_MouseLeave({ $CloseX.Background = 'White' })
 $CloseX.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $win.Close() })   # Handled: don't start a drag
 $How.Add_MouseLeftButtonDown({ $HowText.Visibility = if ($HowText.Visibility -eq 'Visible') {'Collapsed'} else {'Visible'} })
 
