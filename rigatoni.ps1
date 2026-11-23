@@ -509,7 +509,7 @@ $pill = @'
    </Grid>
   </Border>
   <!-- close (x): top corner of whichever card is showing -->
-  <Border x:Name="CloseX" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,7,8,0" Width="20" Height="20" CornerRadius="10" Background="Transparent" Cursor="Hand" ToolTip="Close">
+  <Border x:Name="CloseX" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8,7,8,0" Width="20" Height="20" CornerRadius="10" Background="Transparent" Cursor="Hand" ToolTip="Close">
    <TextBlock Text="&#x2715;" FontSize="11" Foreground="#9A9189" HorizontalAlignment="Center" VerticalAlignment="Center"/>
   </Border>
  </Grid>
@@ -530,6 +530,7 @@ function Set-Lang($code) {
   $script:L = $I.$code
   $e = $L.ex.($ex.k)
   $win.FlowDirection = if ($L.rtl) { 'RightToLeft' } else { 'LeftToRight' }
+  $win.FindName('CloseX').HorizontalAlignment = if ($L.rtl) { 'Left' } else { 'Right' }   # x stays on the physical right in every language
   $TimeTo.Text = $L.ui.timeTo; $Word.Text = $L.ui.($ex.w); $Sub.Text = $L.ui.sub -f (Get-Name $whoIdx $L)
   $Title.Text = $e.t; $Desc.Text = $e.d; $Amount.Text = $e.a; $HowText.Text = $e.h; $How.Text = $L.ui.howto
   $Tip.Text = $L.ui.tip -f $L.tips[$tipIdx % $L.tips.Count]
