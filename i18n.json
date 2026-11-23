@@ -29,7 +29,8 @@
     "cast": ["Tony the Rigatoni", "Penny the Penne", "Fifi the Farfalle", "Rocco the Ravioli", "Spago the Spaghetti", "Lulu the Lasagna",
              "Fala the Falafel", "Shawi the Shawarma",
              "Sufi the Sufganiya", "Dov the Dreidel", "Mena the Menorah", "Neri the Candle",
-             "Pumpi the Pumpkin", "Gobbles the Turkey", "Cornelius the Corn", "Patty the Pie"],
+             "Pumpi the Pumpkin", "Gobbles the Turkey", "Cornelius the Corn", "Patty the Pie",
+             "Surprise Bourekas", "Half Portion", "Sabich"],
     "tips": {
       "stretch": [
         "Screen top at eye level, about an arm's length away.",
@@ -115,7 +116,8 @@
     "cast": ["טוני הריגטוני", "פני הפנה", "פיפי הפרפאלה", "רוקו הרביולי", "ספגו הספגטי", "לולו הלזניה",
              "פלאפי הפלאפל", "שווארמי השווארמה",
              "סופי הסופגנייה", "סבי הסביבון", "מנורי החנוכייה", "נרי הנר",
-             "דלעתי הדלעת", "גובלס ההודו", "תירסי התירס", "פטי פאי הדלעת"],
+             "דלעתי הדלעת", "גובלס ההודו", "תירסי התירס", "פטי פאי הדלעת",
+             "בורקס הפתעות", "חצי מנה", "סביח"],
     "tips": {
       "stretch": [
         "החלק העליון של המסך בגובה העיניים, במרחק של בערך יד.",

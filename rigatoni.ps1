@@ -253,7 +253,31 @@ $cast = @(
      g='<RectangleGeometry Rect="12,46,86,82" RadiusX="22" RadiusY="22"/>'
      d="<Path Data='M 14,62 Q 20,50 28,58 Q 36,48 44,58 Q 52,48 60,58 Q 68,48 76,58 Q 84,48 90,58 Q 96,52 96,62 L 96,68 L 14,68 Z' Fill='#D9A45C' Stroke='$INK' StrokeThickness='2.5' StrokeLineJoin='Round'/>" +
        "<Rectangle Canvas.Left='14' Canvas.Top='104' Width='82' Height='10' Fill='#D9A45C'/>" +
-       "<Path Data='M 40,46 Q 38,34 48,34 Q 50,22 60,28 Q 70,26 70,38 Q 76,44 68,48 L 42,48 Q 36,48 40,46 Z' Fill='White' Stroke='$INK' StrokeThickness='2.5' StrokeLineJoin='Round'/>" }
+       "<Path Data='M 40,46 Q 38,34 48,34 Q 50,22 60,28 Q 70,26 70,38 Q 76,44 68,48 L 42,48 Q 36,48 40,46 Z' Fill='White' Stroke='$INK' StrokeThickness='2.5' StrokeLineJoin='Round'/>" },
+  @{ kit='streetfood'; ax=6; c='#DE9C3A','#F7CD74','#CF8C2E'   # 16 surprise bourekas: flaky triangle, sesame, filling peeking out
+     g='<PathGeometry Figures="M 55,24 Q 61,23 64,30 L 97,116 Q 100,127 89,127 L 21,127 Q 10,127 13,116 L 46,30 Q 49,23 55,24 Z"/>'
+     d='<Path Data="M 33,92 Q 55,100 77,92 M 26,108 Q 55,117 84,108" Stroke="#C47E26" StrokeThickness="2.5"/>' +
+       '<Ellipse Canvas.Left="44" Canvas.Top="38" Width="14" Height="7" Fill="White" Opacity="0.45"/>' +
+       (Dots (@(52,30),@(40,52),@(70,50),@(30,82),@(80,80),@(48,104),@(64,100)) 5 2.6 '#FBF0D0') +
+       "<Path Data='M 70,118 Q 78,110 88,114' Stroke='$INK' StrokeThickness='2'/>" +
+       '<Ellipse Canvas.Left="74" Canvas.Top="112" Width="5" Height="4" Fill="#5FA03A"/><Ellipse Canvas.Left="79" Canvas.Top="111" Width="5" Height="4" Fill="#F2C94C"/><Ellipse Canvas.Left="84" Canvas.Top="113" Width="4" Height="4" Fill="#E0453A"/>' },
+  @{ kit='streetfood'; c='#E8C687','#F8E6BF','#DDB878'   # 17 half portion: half pita stuffed with falafel, salad, tahini
+     g='<PathGeometry Figures="M 18,44 L 92,44 L 92,122 Q 92,132 82,132 L 28,132 Q 18,132 18,122 Z"/>'
+     d='<Path Data="M 22,104 Q 55,112 88,104" Stroke="#CFA866" StrokeThickness="2"/>' +
+       "<Ellipse Canvas.Left='18' Canvas.Top='30' Width='20' Height='18' Fill='#7A4A1C' Stroke='$INK' StrokeThickness='2.5'/>" +
+       "<Ellipse Canvas.Left='36' Canvas.Top='22' Width='21' Height='19' Fill='#8A5626' Stroke='$INK' StrokeThickness='2.5'/>" +
+       "<Ellipse Canvas.Left='58' Canvas.Top='28' Width='20' Height='18' Fill='#7A4A1C' Stroke='$INK' StrokeThickness='2.5'/>" +
+       '<Ellipse Canvas.Left="74" Canvas.Top="32" Width="15" Height="12" Fill="#E0453A"/><Ellipse Canvas.Left="30" Canvas.Top="40" Width="14" Height="8" Fill="#7BB247"/>' +
+       '<Ellipse Canvas.Left="52" Canvas.Top="40" Width="12" Height="7" Fill="#9CCB5B"/>' +
+       '<Path Data="M 24,38 Q 34,32 44,38 T 64,36 T 84,38" Stroke="#F7EEDC" StrokeThickness="3.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>' },
+  @{ kit='streetfood'; c='#E6C07E','#F7E3B8','#DAB06C'   # 18 sabich: round pita, eggplant, egg slices, parsley, amba
+     g='<PathGeometry Figures="M 16,72 Q 16,38 55,38 Q 94,38 94,72 Q 94,130 55,130 Q 16,130 16,72 Z"/>'
+     d="<Ellipse Canvas.Left='18' Canvas.Top='26' Width='26' Height='18' Fill='#5B2C4A' Stroke='$INK' StrokeThickness='2.5'/><Ellipse Canvas.Left='23' Canvas.Top='30' Width='16' Height='9' Fill='#C9A36A'/>" +
+       "<Ellipse Canvas.Left='64' Canvas.Top='26' Width='26' Height='18' Fill='#5B2C4A' Stroke='$INK' StrokeThickness='2.5'/><Ellipse Canvas.Left='69' Canvas.Top='30' Width='16' Height='9' Fill='#C9A36A'/>" +
+       "<Ellipse Canvas.Left='40' Canvas.Top='20' Width='22' Height='22' Fill='White' Stroke='$INK' StrokeThickness='2.5'/><Ellipse Canvas.Left='46' Canvas.Top='26' Width='10' Height='10' Fill='#F2B81B'/>" +
+       '<Ellipse Canvas.Left="30" Canvas.Top="38" Width="10" Height="7" Fill="#5FA03A"/><Ellipse Canvas.Left="62" Canvas.Top="38" Width="10" Height="7" Fill="#5FA03A"/>' +
+       '<Path Data="M 22,44 Q 32,36 42,44 T 62,42 T 86,44" Stroke="#E8A21C" StrokeThickness="3.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>' +
+       '<Path Data="M 22,104 Q 55,114 88,104" Stroke="#C9A060" StrokeThickness="2"/>' }
 )
 
 # ---- CHARACTER PACKS: every folder in .\packs with a pack.json adds a kit (see packs\README.md) ----
