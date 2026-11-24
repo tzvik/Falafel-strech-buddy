@@ -37,9 +37,10 @@ try { $j = Get-Content $state -Raw -ErrorAction Stop | ConvertFrom-Json; $st.idx
       if ($j.date -eq $today) { $st.count = [int]$j.count } } catch {}
 if ($Lang) { $st.lang = $Lang }
 if (-not $I.($st.lang)) { $st.lang = 'en' }
-# Reminder types (tray > Reminder types): weight 2 = often, 1 = sometimes, 0 = off.
-# Each popup picks a type by weight (never the same type twice in a row if others are on),
-# then the next exercise of that type in turn.
+# Schedule (popups ~every 30 min): WATER whenever >= 55 min have passed since the last water break
+# (so every 2nd popup ~ every 60 min, up to ~90 at slower paces); every other popup is stretch / move / eyes,
+# i.e. you get up and move every 30-60 min. Reminder types (tray): weight 2 = often, 1 = sometimes, 0 = off.
+# Non-water popups pick a type by weight (never the same type twice in a row), then the next exercise of that type.
 $cats = [ordered]@{ stretch = 'thoracic','shake','neckturn','chin','armsout','neck','wrists','twist','shoulders'; water = 'drink','drink2'
                     move = 'stand','wander','walk','calves'; eyes = 'eyes','breathe' }
 $weights = @{ stretch = 2; water = 2; move = 1; eyes = 1 }
@@ -47,9 +48,15 @@ if ($j -and $j.types) { foreach ($c in @($cats.Keys)) { if ($null -ne $j.types.$
 function Select-Exercise {
   $on = @($cats.Keys | ? { $weights[$_] -gt 0 })
   if (-not $on) { return $null }
-  $pool = @($on | ? { $_ -ne $j.lastCat }); if (-not $pool) { $pool = $on }
-  $bag = foreach ($c in $pool) { ,$c * $weights[$c] }          # weighted lottery
-  $cat = Get-Random -InputObject @($bag | % { $_ })
+  $lastWater = if ($j -and $j.lastWaterAt) { [datetime]$j.lastWaterAt } else { [datetime]::MinValue }
+  $waterDue = ($weights.water -gt 0) -and (((Get-Date) - $lastWater).TotalMinutes -ge 55)
+  $moves = @($on | ? { $_ -ne 'water' })
+  if ($waterDue -or -not $moves) { $cat = 'water' }
+  else {
+    $pool = @($moves | ? { $_ -ne $j.lastCat }); if (-not $pool) { $pool = $moves }
+    $bag = foreach ($c in $pool) { ,$c * $weights[$c] }        # weighted lottery among stretch / move / eyes
+    $cat = Get-Random -InputObject @($bag | % { $_ }) }
+  if ($cat -eq 'water' -and -not $Gallery) { Save-State @{ lastWaterAt = (Get-Date).ToString('o') } }
   $n = if ($j -and $null -ne $j."ci_$cat") { [int]$j."ci_$cat" } else { 0 }
   $key = $cats[$cat][$n % $cats[$cat].Count]
   if (-not $Gallery) { Save-State @{ lastCat = $cat; "ci_$cat" = $n + 1 } }
@@ -619,7 +626,7 @@ if ($Gallery) {
         <TextBlock DockPanel.Dock='Left' Text='$($catIcon[$_])' FontFamily='Segoe UI Emoji' FontSize='26' VerticalAlignment='Center' Margin='0,0,12,0'/>
         <StackPanel><TextBlock Text='$(& $esc $u.cats.$_)' FontSize='16' FontWeight='Bold' Foreground='#1A1A1A'/>
         <TextBlock Text='$(& $esc $u.catDesc.$_)' FontSize='12.5' Foreground='#777' TextWrapping='Wrap'/></StackPanel></DockPanel></Border>" }) -join ''
-    $freqOpts = 30, 45, 60, 90, 120
+    $freqOpts = 20, 30, 45, 60, 90
     $freqPills = (0..4 | % { "<Border x:Name='Freq_$($freqOpts[$_])' Tag='$($freqOpts[$_])' Margin='6,3' Padding='16,9' CornerRadius='12' BorderThickness='2' Cursor='Hand'>
         <TextBlock Text='$(& $esc $u.freq[$_])' FontSize='14.5' FontWeight='SemiBold' Foreground='#1A1A1A'/></Border>" }) -join ''
     [xml]$wx = @"
@@ -682,7 +689,7 @@ if ($Gallery) {
     if ($script:sel -like 'kit:*') { $m = @($cast | ? { $_.kit -eq $script:sel.Substring(4) }); if ($m.Count -eq 1 -and $m[0].id) { $script:sel = $m[0].id } }
     $script:on = @{}; foreach ($c in $catOrder) { $script:on[$c] = ($weights[$c] -gt 0) }
     $script:on.eyes = $true   # first run: everything on, uncheck what you don't want
-    $script:every = if ($j -and [int]$j.every -gt 0) { [int]$j.every } else { 45 }
+    $script:every = if ($j -and [int]$j.every -gt 0) { [int]$j.every } else { 30 }
     $script:sound = -not $script:muted
     function Paint-Card($card, $chkName, $isOn) {
       $card.BorderBrush = if ($isOn) { $ACC } else { $NOPE }; $card.Background = if ($isOn) { '#FFF4EC' } else { '#F4F1EC' }

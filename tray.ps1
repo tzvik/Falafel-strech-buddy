@@ -23,9 +23,9 @@ function Set-State($changes) {    # same merge-write as the popup, so neither cl
   $cur | ConvertTo-Json | Set-Content $state -Encoding utf8
 }
 function Get-L { $s = Get-State; $code = if ($s.lang -and $I.($s.lang)) { $s.lang } else { 'he' }; $I.$code }   # default Hebrew
-# Default ~45 min: ergonomics guidance is to get up / move every 30-60 min of sitting (e.g. Cornell's 20-8-2),
-# and to drink little and often rather than a lot at once. Popups alternate stretch / water / move.
-function Get-Every { $e = [int](Get-State).every; if ($e -gt 0) { $e } else { 45 } }   # minutes
+# Default ~30 min: move every 30-60 min of sitting, drink a glass every 60-90 min.
+# Popups alternate: water when an hour has passed since the last one, otherwise stretch / move (rigatoni.ps1).
+function Get-Every { $e = [int](Get-State).every; if ($e -gt 0) { $e } else { 30 } }   # minutes
 # Gentle randomness: each gap is the chosen interval +/- 15%, so it doesn't feel like a metronome.
 function Get-NextTime { (Get-Date).AddMinutes((Get-Every) * (0.85 + (Get-Random -Maximum 1000) / 3333)) }
 function Get-PausedUntil { $p = (Get-State).pausedUntil; if ($p) { [datetime]$p } else { [datetime]::MinValue } }
@@ -143,7 +143,7 @@ $menu.Add_Opening({
     }
   }
   $ev = Add-Item $menu $L.ui.every $null $false $null
-  $opts = 30, 45, 60, 90, 120   # labels in i18n ui.freq, same order
+  $opts = 20, 30, 45, 60, 90   # labels in i18n ui.freq, same order
   for ($i = 0; $i -lt $opts.Count; $i++) {
     Add-Item $ev $L.ui.freq[$i] $opts[$i] ($opts[$i] -eq (Get-Every)) { param($o) Set-State @{ every = $o.Tag }
       $script:next = Get-NextTime; Update-Tip } | Out-Null

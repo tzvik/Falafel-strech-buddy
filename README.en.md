@@ -27,8 +27,9 @@ No admin rights needed. It installs for your user only, starts with Windows, and
 
 ## What it does
 
-- About **every 45 minutes**, give or take a little (ergonomics guidance: move every 30-60 min of sitting;
-  drink little and often). Adjustable: ~30 min / 45 min / 1h / 1.5h / 2h.
+- **A reminder about every 30 minutes, alternating:** drink water about every hour (one 8 oz / 240 ml glass),
+  and stretch or get up and walk in between, so you move every 30-60 minutes.
+  Adjustable: ~20 min / 30 min / 45 min / 1h / 1.5h.
 - A short toast ("It's time to **stretch!**"), then a card with **one** exercise. The character demos it live.
 - Orange **arrows** show which way to move; for moves a front view can't show (chin tucks, upper-back stretch)
   a small **side-view bubble** shows it.
@@ -56,7 +57,7 @@ No admin rights needed. It installs for your user only, starts with Windows, and
 | Character | pick one in the gallery, "rotating" within a kit, or "feeling lucky" (anyone) |
 | Language | English, עברית |
 | Reminder types | Stretches / Water / Get up & move / Eyes & breathing: each Often, Sometimes or Off |
-| How often | about every 30 min, 45 min (recommended), 1, 1.5 or 2 hours |
+| How often | about every 20 min, 30 min (recommended), 45 min, 1 or 1.5 hours |
 | Pause for 1 hour, Mute sounds, Reset popup position, Exit | |
 
 ## The cast
