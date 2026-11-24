@@ -48,6 +48,15 @@ $g.FillRectangle((New-Object System.Drawing.SolidBrush (& $C 211 58 44)), 8, 24,
 $g.FillEllipse([System.Drawing.Brushes]::Black, 11, 12, 3, 4); $g.FillEllipse([System.Drawing.Brushes]::Black, 18, 12, 3, 4)   # eyes
 $g.DrawArc((New-Object System.Drawing.Pen ((& $C 43 36 32), 1.3)), 13, 14, 6, 4, 10, 160)                           # smile
 
+# your own icon: drop a tray-icon.png in this folder (kept out of git) and it replaces the shawarma
+$custom = Join-Path $dir 'tray-icon.png'
+if (Test-Path $custom) {
+  try { $src = [System.Drawing.Image]::FromFile($custom)
+        $k = [math]::Min(32 / $src.Width, 32 / $src.Height); $w = [int]($src.Width * $k); $h = [int]($src.Height * $k)
+        $g.Clear([System.Drawing.Color]::Transparent); $g.InterpolationMode = 'HighQualityBicubic'
+        $g.DrawImage($src, [int]((32 - $w) / 2), [int]((32 - $h) / 2), $w, $h); $src.Dispose() }
+  catch { Write-Log "tray-icon.png unreadable: $($_.Exception.Message)" } }
+
 $ni = New-Object System.Windows.Forms.NotifyIcon
 $ni.Icon = [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
 $ni.Visible = $true

@@ -4,6 +4,7 @@ installer/build/
 # personal settings + local log
 state.json
 tray.log
+tray-icon.png
 # your own character packs stay private; only the example ships
 packs/*
 !packs/README.md
