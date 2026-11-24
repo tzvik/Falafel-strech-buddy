@@ -7,6 +7,7 @@ Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" |
   Where-Object { $_.CommandLine -like '*tray.ps1*' } |
   ForEach-Object { Stop-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }
 Unregister-ScheduledTask -TaskName 'Rigatoni Posture Reminder' -Confirm:$false -ErrorAction SilentlyContinue
+Unregister-ScheduledTask -TaskName 'Stretch Buddy keep-alive' -Confirm:$false -ErrorAction SilentlyContinue
 Remove-Item 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\StretchBuddy' -ErrorAction SilentlyContinue
 
 if ($dir -eq (Join-Path $env:LOCALAPPDATA 'StretchBuddy')) {   # never deletes a dev checkout

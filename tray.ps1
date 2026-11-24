@@ -5,9 +5,16 @@ $dir   = Split-Path $MyInvocation.MyCommand.Path
 $state = Join-Path $dir 'state.json'
 $I     = Get-Content (Join-Path $dir 'i18n.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 
-# one tray per user session
+# one tray per user session (the keep-alive task also starts us; if we're already running it just exits)
 $mutex = New-Object System.Threading.Mutex($false, 'Local\NoodleReminderTray')
 if (-not $mutex.WaitOne(0)) { exit }
+
+# never die silently: errors go to tray.log and the tray keeps running
+$log = Join-Path $dir 'tray.log'
+function Write-Log($msg) { try { Add-Content $log ("{0:yyyy-MM-dd HH:mm:ss}  {1}" -f (Get-Date), $msg) } catch {} }
+[System.Windows.Forms.Application]::SetUnhandledExceptionMode('CatchException')
+[System.Windows.Forms.Application]::add_ThreadException({ param($s, $e) Write-Log "ERROR: $($e.Exception.Message)" })
+Write-Log 'tray started'
 
 function Get-State { try { Get-Content $state -Raw -ErrorAction Stop | ConvertFrom-Json } catch { [pscustomobject]@{} } }
 function Set-State($changes) {    # same merge-write as the popup, so neither clobbers the other
@@ -16,19 +23,30 @@ function Set-State($changes) {    # same merge-write as the popup, so neither cl
   $cur | ConvertTo-Json | Set-Content $state -Encoding utf8
 }
 function Get-L { $s = Get-State; $code = if ($s.lang -and $I.($s.lang)) { $s.lang } else { 'he' }; $I.$code }   # default Hebrew
-function Get-Every { $e = [int](Get-State).every; if ($e -gt 0) { $e } else { 120 } }   # minutes; default ~2h
-# Random timing: each gap is the chosen interval +/- 25%, so reminders don't feel like a metronome.
-function Get-NextTime { (Get-Date).AddMinutes((Get-Every) * (0.75 + (Get-Random -Maximum 1000) / 2000)) }
+# Default ~45 min: ergonomics guidance is to get up / move every 30-60 min of sitting (e.g. Cornell's 20-8-2),
+# and to drink little and often rather than a lot at once. Popups alternate stretch / water / move.
+function Get-Every { $e = [int](Get-State).every; if ($e -gt 0) { $e } else { 45 } }   # minutes
+# Gentle randomness: each gap is the chosen interval +/- 15%, so it doesn't feel like a metronome.
+function Get-NextTime { (Get-Date).AddMinutes((Get-Every) * (0.85 + (Get-Random -Maximum 1000) / 3333)) }
 function Get-PausedUntil { $p = (Get-State).pausedUntil; if ($p) { [datetime]$p } else { [datetime]::MinValue } }
 
-# tray icon: a tiny rigatoni drawn at runtime (no image file needed)
+# tray icon: a tiny shawarma (laffa wrap, fillings on top, paper wrapper), drawn at runtime - no image file needed
 $bmp = New-Object System.Drawing.Bitmap 32, 32
 $g = [System.Drawing.Graphics]::FromImage($bmp); $g.SmoothingMode = 'AntiAlias'
-$g.FillRectangle((New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(242,184,75))), 7, 2, 18, 28)
-$g.DrawRectangle((New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(184,118,28)), 2), 7, 2, 18, 28)
-foreach ($x in 11, 16, 21) { $g.DrawLine((New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(196,127,34)), 1.5), $x, 4, $x, 28) }
-$g.FillEllipse([System.Drawing.Brushes]::Black, 11, 13, 4, 5); $g.FillEllipse([System.Drawing.Brushes]::Black, 18, 13, 4, 5)
-$g.DrawArc((New-Object System.Drawing.Pen ([System.Drawing.Color]::Black), 1.5), 12, 17, 8, 5, 0, 180)
+$C = { param($r, $gg, $b) [System.Drawing.Color]::FromArgb($r, $gg, $b) }
+$ink = New-Object System.Drawing.Pen ((& $C 43 36 32), 1.6)
+$wrap = New-Object System.Drawing.Drawing2D.GraphicsPath; $wrap.AddArc(7, 7, 8, 8, 180, 90); $wrap.AddArc(17, 7, 8, 8, 270, 90)
+$wrap.AddLine(25, 11, 25, 30); $wrap.AddLine(25, 30, 7, 30); $wrap.CloseFigure()
+$g.FillPath((New-Object System.Drawing.SolidBrush (& $C 236 208 150)), $wrap); $g.DrawPath($ink, $wrap)          # laffa
+$g.FillEllipse((New-Object System.Drawing.SolidBrush (& $C 139 74 34)), 7, 2, 18, 9); $g.DrawEllipse($ink, 7, 2, 18, 9)   # meat
+$g.FillEllipse((New-Object System.Drawing.SolidBrush (& $C 95 160 58)), 8, 3, 5, 4)                                  # parsley
+$g.FillEllipse((New-Object System.Drawing.SolidBrush (& $C 95 160 58)), 19, 2, 5, 4)
+$g.FillEllipse((New-Object System.Drawing.SolidBrush (& $C 224 69 58)), 13, 1, 5, 4)                                 # tomato
+$paper = [System.Drawing.Point[]]@((New-Object System.Drawing.Point 7,21),(New-Object System.Drawing.Point 10,19),(New-Object System.Drawing.Point 13,21),(New-Object System.Drawing.Point 16,19),(New-Object System.Drawing.Point 19,21),(New-Object System.Drawing.Point 22,19),(New-Object System.Drawing.Point 25,21),(New-Object System.Drawing.Point 25,30),(New-Object System.Drawing.Point 7,30))
+$g.FillPolygon([System.Drawing.Brushes]::White, $paper); $g.DrawPolygon($ink, $paper)                               # paper wrapper
+$g.FillRectangle((New-Object System.Drawing.SolidBrush (& $C 211 58 44)), 8, 24, 17, 2)                              # red stripe
+$g.FillEllipse([System.Drawing.Brushes]::Black, 11, 12, 3, 4); $g.FillEllipse([System.Drawing.Brushes]::Black, 18, 12, 3, 4)   # eyes
+$g.DrawArc((New-Object System.Drawing.Pen ((& $C 43 36 32), 1.3)), 13, 14, 6, 4, 10, 160)                           # smile
 
 $ni = New-Object System.Windows.Forms.NotifyIcon
 $ni.Icon = [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
@@ -114,7 +132,7 @@ $menu.Add_Opening({
     }
   }
   $ev = Add-Item $menu $L.ui.every $null $false $null
-  $opts = 60, 90, 120, 180
+  $opts = 30, 45, 60, 90, 120   # labels in i18n ui.freq, same order
   for ($i = 0; $i -lt $opts.Count; $i++) {
     Add-Item $ev $L.ui.freq[$i] $opts[$i] ($opts[$i] -eq (Get-Every)) { param($o) Set-State @{ every = $o.Tag }
       $script:next = Get-NextTime; Update-Tip } | Out-Null
@@ -137,10 +155,12 @@ $ni.Add_MouseDoubleClick({ Show-Reminder; Update-Tip })
 # tick every 30s: fire when due (unless paused); pause expiring restarts the countdown
 $timer = New-Object System.Windows.Forms.Timer -Property @{ Interval = 30000 }
 $timer.Add_Tick({
-  $now = Get-Date
-  if ((Get-PausedUntil) -gt $now) { $script:next = (Get-PausedUntil).AddMinutes((Get-Every) * 0.5) }
-  elseif ($now -ge $script:next) { Show-Reminder }
-  Update-Tip
+  try {
+    $now = Get-Date
+    if ((Get-PausedUntil) -gt $now) { $script:next = (Get-PausedUntil).AddMinutes((Get-Every) * 0.5) }
+    elseif ($now -ge $script:next) { Write-Log 'reminder shown'; Show-Reminder }
+    Update-Tip
+  } catch { Write-Log "ERROR in timer: $($_.Exception.Message)" }
 })
 $timer.Start(); Update-Tip
 

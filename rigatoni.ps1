@@ -695,12 +695,9 @@ $pill = @'
        <TextBlock x:Name="SuccessText" FontSize="14" FontWeight="SemiBold" Foreground="#1F7A3A" Margin="8,0,0,0" VerticalAlignment="Center"/>
       </StackPanel>
       <DockPanel x:Name="Actions" Margin="0,8,0,0">
-       <TextBlock x:Name="Time" DockPanel.Dock="Right" FontSize="12" Foreground="#888" VerticalAlignment="Center" Margin="10,0,0,0"/>
        <TextBlock x:Name="How" DockPanel.Dock="Right" FontSize="13" FontWeight="SemiBold" Foreground="#333" VerticalAlignment="Center" Cursor="Hand"/>
        <StackPanel Orientation="Horizontal">
         <Button x:Name="Primary" Background="#1A1A1A" Foreground="White" FontWeight="SemiBold" FontSize="13" Cursor="Hand" BorderThickness="0">
-         <Button.Template>$pill</Button.Template></Button>
-        <Button x:Name="Secondary" Background="#ECEAE6" Foreground="#1A1A1A" FontWeight="SemiBold" FontSize="13" Margin="8,0,0,0" Cursor="Hand" BorderThickness="0">
          <Button.Template>$pill</Button.Template></Button>
        </StackPanel>
       </DockPanel>
@@ -724,15 +721,12 @@ $pill = @'
 "@
 
 $script:win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $xaml))
-'TimeTo','Word','Sub','Toast','Card','Count','Title','Desc','Amount','HowText','Tip','Time','How','Primary','Secondary','Bar','Success','SuccessText','Actions','Fx' |
+'TimeTo','Word','Sub','Toast','Card','Count','Title','Desc','Amount','HowText','Tip','How','Primary','Bar','Success','SuccessText','Actions','Fx' |
   ForEach-Object { Set-Variable -Name $_ -Value $win.FindName($_) }
 $tipIdx = Get-Random -Maximum 1000
 
 # --- text (re-applied live when you switch language) ---
-$script:left = $ex.s
-$script:running = $false
 $script:doneShown = $false
-function Format-Secs($s) { if ($s -ge 60) { '{0}:{1:00}' -f [math]::Floor($s/60), ($s%60) } else { $L.ui.sec -f $s } }
 function Set-Lang($code) {
   $script:L = $I.$code
   $e = $L.ex.($ex.k)
@@ -746,9 +740,8 @@ function Set-Lang($code) {
   $Tip.Text = if ($tips) { $L.ui.tip -f $tips[$tipIdx % $tips.Count] } else { '' }
   $Tip.Visibility = if ($tips) { 'Visible' } else { 'Collapsed' }
   $Count.Text = $L.ui.today -f ($st.count + [int]$script:doneShown)
-  if ($script:running) { $Primary.Content = $L.ui.done; $Secondary.Content = $L.ui.stop; $Time.Text = $L.ui.left -f (Format-Secs $script:left) }
-  else { $Primary.Content = $L.ui.start; $Secondary.Content = $L.ui.snooze; $Time.Text = Format-Secs $ex.s }
-  if ($script:doneShown) { $Time.Text = $L.ui.nice; $SuccessText.Text = $L.ui.success -f ($st.count + 1) }
+  $Primary.Content = $L.ui.done
+  if ($script:doneShown) { $SuccessText.Text = $L.ui.success -f ($st.count + 1) }
   foreach ($m in $win.ContextMenu.Items) { if ($m -is [System.Windows.Controls.MenuItem]) {
     if ($m.Tag -eq 'mute') { $m.Header = $L.ui.mute; $m.IsChecked = $script:muted } else { $m.IsChecked = ($m.Tag -eq $code) } } }
 }
@@ -797,16 +790,12 @@ $showCard = { if ($Card.Visibility -eq 'Visible') { return }
                  $script:fin.Add_Tick({ $script:fin.Stop(); Complete-Exercise }); $script:fin.Start() } }
 $intro.Add_Tick($showCard); $Toast.Add_MouseLeftButtonDown($showCard); $intro.Start()
 
-# ignored for 3 min -> quietly go away
-$idle = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromMinutes(3) }
-$idle.Add_Tick({ $win.Close() }); $idle.Start()
-
+# no auto-close: the reminder stays on screen until you click Done or the X
 $CloseX = $win.FindName('CloseX')
 $CloseX.Add_MouseEnter({ $CloseX.Background = '#F1ECE5' }); $CloseX.Add_MouseLeave({ $CloseX.Background = 'White' })
 $CloseX.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $win.Close() })   # Handled: don't start a drag
 $How.Add_MouseLeftButtonDown({ $HowText.Visibility = if ($HowText.Visibility -eq 'Visible') {'Collapsed'} else {'Visible'} })
 
-$tick = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromSeconds(1) }
 # --- celebration: confetti burst (milestones always, otherwise ~1 in 3) ---
 function Start-Confetti {
   $w = $win.ActualWidth; $h = $win.ActualHeight; $rnd = New-Object Random
@@ -827,10 +816,10 @@ function Start-Confetti {
     $rt.BeginAnimation([System.Windows.Media.RotateTransform]::AngleProperty, (New-Object System.Windows.Media.Animation.DoubleAnimation(0, ($rnd.Next(-720, 720)), $dur) -Property @{ BeginTime = $delay }))
   }
 }
-# --- finishing an exercise (Done, or the countdown ran out): green success row, cheer, maybe confetti, then close ---
+# --- finishing an exercise (Done): green success row, cheer, maybe confetti, then close ---
 function Complete-Exercise {
   if ($script:doneShown) { return }
-  $tick.Stop(); $idle.Stop(); if (-not $Demo) { Save-State -AddDone }   # previews don't count
+  if (-not $Demo) { Save-State -AddDone }   # previews don't count
   $script:doneShown = $true; Set-Lang $st.lang
   $Actions.Visibility = 'Collapsed'; $Success.Visibility = 'Visible'
   $Bar.Fill = '#2EA44F'; $Bar.Width = $Card.ActualWidth
@@ -842,24 +831,7 @@ function Complete-Exercise {
   $end = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval=[TimeSpan]::FromSeconds(3) }
   $end.Add_Tick({ $win.Close() }); $end.Start()
 }
-$tick.Add_Tick({
-  $script:left--
-  $Bar.Width = ($Card.ActualWidth) * (1 - $script:left / $ex.s)
-  if ($script:left -le 0) { Complete-Exercise }
-  else { $Time.Text = $L.ui.left -f (Format-Secs $script:left) }
-})
-
-$Primary.Add_Click({
-  if (-not $script:running) {           # Start
-    $script:running = $true; $idle.Stop(); Set-Lang $st.lang; $tick.Start()
-  } else { Complete-Exercise }   # Done
-})
-$Secondary.Add_Click({
-  if (-not $script:running) {           # Snooze: come back in 5 min
-    Start-Process powershell -WindowStyle Hidden -ArgumentList "-NoProfile -Command Start-Sleep 300; wscript '$dir\launch.vbs'"
-  }
-  $win.Close()                          # Stop / Snooze
-})
+$Primary.Add_Click({ Complete-Exercise })   # one call to action: Done
 
 if ($Snap) { Start-Snaps @(1.2, 3.4, 4.2, 5.0) }   # toast, then three card frames
 $win.ShowDialog() | Out-Null

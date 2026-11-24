@@ -25,5 +25,11 @@ Set-ItemProperty $key NoRepair 1 -Type DWord
 # older versions used a 20-minute scheduled task; the tray does the timing now
 Unregister-ScheduledTask -TaskName 'Rigatoni Posture Reminder' -Confirm:$false -ErrorAction SilentlyContinue
 
+# keep-alive: every 15 min make sure the tray is running (if it already is, the new copy exits at once)
+$act = New-ScheduledTaskAction -Execute "$env:WINDIR\System32\wscript.exe" -Argument "`"$dir\launch.vbs`" tray.ps1"
+$trg = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 15)
+$set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskName 'Stretch Buddy keep-alive' -Action $act -Trigger $trg -Settings $set -Force | Out-Null
+
 Start-Process wscript.exe -ArgumentList "`"$dir\launch.vbs`" tray.ps1"
 "Installed. Look for the rigatoni in your system tray (you may need to click the ^ arrow)."

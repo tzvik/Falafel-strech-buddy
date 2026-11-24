@@ -25,13 +25,13 @@ No admin rights needed. It installs for your user only, starts with Windows, and
 
 ## What it does
 
-- About **every 2 hours, at a slightly random time** (adjustable: ~1h / 1.5h / 2h / 3h). Not a nag.
+- About **every 45 minutes**, give or take a little (ergonomics guidance: move every 30-60 min of sitting;
+  drink little and often). Adjustable: ~30 min / 45 min / 1h / 1.5h / 2h.
 - A short toast ("It's time to **stretch!**"), then a card with **one** exercise. The character demos it live.
 - Orange **arrows** show which way to move; for moves a front view can't show (chin tucks, upper-back stretch)
   a small **side-view bubble** shows it.
-- **Start** runs a countdown. Finish and you get a green "Nice! That's 3 today", a happy character, and
-  now and then a burst of **confetti**.
-- **Snooze** brings it back in 5 minutes; **✕** or ignoring it closes it quietly.
+- The reminder **stays on screen until you act on it**. One button: **Done**. You get a green
+  "Nice! That's 3 today", a happy character, and now and then a burst of **confetti**. **✕** dismisses it.
 - 19 exercises: upper-back stretch, chin tucks, neck stretch, neck turns, shoulder rolls, arms wide, seated twist,
   wrist & finger stretch, hand shake-out, eye break (20-20-20), deep breaths, calf raises, stand up,
   turn around & walk, walkaround, water breaks.
@@ -53,7 +53,7 @@ No admin rights needed. It installs for your user only, starts with Windows, and
 | Character | pick one in the gallery, "rotating" within a kit, or "feeling lucky" (anyone) |
 | Language | English, עברית |
 | Reminder types | Stretches / Water / Get up & move / Eyes & breathing: each Often, Sometimes or Off |
-| How often | about every 1, 1.5, 2 (recommended) or 3 hours |
+| How often | about every 30 min, 45 min (recommended), 1, 1.5 or 2 hours |
 | Pause for 1 hour, Mute sounds, Reset popup position, Exit | |
 
 ## The cast
