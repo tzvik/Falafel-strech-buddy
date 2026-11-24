@@ -559,10 +559,10 @@ if ($Gallery) {
   $script:sel = if ($whoSet) { $whoSet } else { 'random' }
   $esc = { param($s) [Security.SecurityElement]::Escape("$s") }
   $script:nTiles = 0
-  function Tile($tag, $art, $name) { $script:nTiles++
-    "<Border x:Name='Tile$($script:nTiles)' Tag='$tag' Width='122' Height='170' Margin='4' Padding='5' CornerRadius='16' Background='#F4F1EC' BorderThickness='3' Cursor='Hand'>
-      <StackPanel><Border Height='120' Padding='4'>$art</Border>
-      <TextBlock Text='$(& $esc $name)' TextAlignment='Center' TextWrapping='Wrap' FontSize='12.5' FontWeight='SemiBold' Foreground='#1A1A1A' Margin='0,3,0,0'/></StackPanel></Border>" }
+  function Tile($tag, $art, $name, $w = 122, $h = 170, $ah = 120) { $script:nTiles++
+    "<Border x:Name='Tile$($script:nTiles)' Tag='$tag' Width='$w' Height='$h' Margin='4' Padding='5' CornerRadius='16' Background='#F4F1EC' BorderThickness='3' Cursor='Hand'>
+      <StackPanel><Border Height='$ah' Padding='4'>$art</Border>
+      <TextBlock Text='$(& $esc $name)' TextAlignment='Center' TextWrapping='Wrap' FontSize='12' FontWeight='SemiBold' Foreground='#1A1A1A' Margin='0,3,0,0'/></StackPanel></Border>" }
   # "random" tile art: two chunky crossing shuffle arrows (ink + color), white gap where they cross
   $dice = { param($c) "<Viewbox Margin='10'><Canvas Width='104' Height='84'>
     <Path Data='M 10,64 L 26,64 C 48,64 52,22 74,22 L 82,22' Stroke='$INK' StrokeThickness='11' StrokeStartLineCap='Round' StrokeEndLineCap='Round'/>
@@ -603,6 +603,14 @@ if ($Gallery) {
   # ============ FIRST-RUN WIZARD: 1 character -> 2 reminder types -> 3 timing + sound. Skip / X keep the defaults ============
   if ($Setup) {
     $u = $L.ui
+    # step 1 shows EVERY character in one compact grid (no section titles), so you can see there are many to choose from
+    $wizStart = $script:nTiles + 1
+    $grid = Tile 'random' $lucky $u.random 100 152 96
+    $nChars = 0
+    foreach ($kit in $kits) { for ($i = 0; $i -lt $cast.Count; $i++) { if ($cast[$i].kit -eq $kit) {
+      $tag = if ($cast[$i].id) { $cast[$i].id } else { "$i" }
+      $grid += Tile $tag (New-Noodle "G$i" $cast[$i]) (Get-Name $i $L) 100 152 96; $nChars++ } } }
+    $tiles = "<WrapPanel>$grid</WrapPanel>"
     $catOrder = 'stretch', 'water', 'move', 'eyes'
     $catIcon = @{ stretch = '&#x1F938;'; water = '&#x1F4A7;'; move = '&#x1F6B6;'; eyes = '&#x1F440;' }
     $chk = { param($n) "<Border x:Name='$n' Width='24' Height='24' CornerRadius='12' BorderThickness='2' VerticalAlignment='Center'><TextBlock Text='&#x2713;' Foreground='White' FontWeight='Bold' FontSize='13' HorizontalAlignment='Center' VerticalAlignment='Center'/></Border>" }
@@ -684,7 +692,7 @@ if ($Gallery) {
       foreach ($m in $freqOpts) { $b = & $F "Freq_$m"; $isOn = ($m -eq $script:every)
         $b.BorderBrush = if ($isOn) { $ACC } else { $NOPE }; $b.Background = if ($isOn) { '#FFF4EC' } else { '#F4F1EC' } }
       Paint-Card (& $F 'SoundT') 'Chk_sound' $script:sound }
-    $tileEls = 1..$script:nTiles | % { $win.FindName("Tile$_") }
+    $tileEls = $wizStart..$script:nTiles | % { $win.FindName("Tile$_") }
     function Show-Sel { foreach ($t in $tileEls) { $t.BorderBrush = if ($t.Tag -eq $script:sel) { $ACC } else { $NOPE } } }
     foreach ($t in $tileEls) { $t.Add_MouseLeftButtonUp({ param($s) $script:sel = $s.Tag; Show-Sel }) }
     foreach ($c in $catOrder) { (& $F "Type_$c").Add_MouseLeftButtonUp({ param($s) $script:on[$s.Tag] = -not $script:on[$s.Tag]; Paint-All }) }
@@ -694,7 +702,7 @@ if ($Gallery) {
     function Show-Step {
       foreach ($k in 1..3) { (& $F "P$k").Visibility = if ($k -eq $script:step) { 'Visible' } else { 'Collapsed' }
                              (& $F "Dot$k").Fill = if ($k -le $script:step) { $ACC } else { '#E3DCD3' } }
-      (& $F 'StepTitle').Text = $u."step$($script:step)"; (& $F 'StepSub').Text = $u."step$($script:step)sub"
+      (& $F 'StepTitle').Text = $u."step$($script:step)"; (& $F 'StepSub').Text = $u."step$($script:step)sub" -f $nChars
       (& $F 'Back').Visibility = if ($script:step -gt 1) { 'Visible' } else { 'Collapsed' }
       (& $F 'Next').Content = if ($script:step -lt 3) { $u.next } else { $u.finish } }
     function Close-Setup($save) {
