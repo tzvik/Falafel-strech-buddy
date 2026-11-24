@@ -928,7 +928,11 @@ $intro.Add_Tick($showCard); $Toast.Add_MouseLeftButtonDown($showCard); $intro.St
 $CloseX = $win.FindName('CloseX')
 $CloseX.Add_MouseEnter({ $CloseX.Background = '#F1ECE5' }); $CloseX.Add_MouseLeave({ $CloseX.Background = 'White' })
 $CloseX.Add_MouseLeftButtonDown({ param($s, $e) $e.Handled = $true; $win.Close() })   # Handled: don't start a drag
-$How.Add_MouseLeftButtonDown({ $HowText.Visibility = if ($HowText.Visibility -eq 'Visible') {'Collapsed'} else {'Visible'} })
+$How.Add_MouseLeftButtonDown({
+  $open = $HowText.Visibility -ne 'Visible'
+  $HowText.Visibility = if ($open) { 'Visible' } else { 'Collapsed' }
+  # arrow shows the state: down = closed, up = open  (U+2304 / U+2303, written as codes to keep this file ASCII)
+  $How.Text = if ($open) { $L.ui.howto.Replace([string][char]0x2304, [string][char]0x2303) } else { $L.ui.howto } })
 
 # --- celebration: confetti burst (milestones always, otherwise ~1 in 3) ---
 function Start-Confetti {
