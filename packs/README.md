@@ -1,7 +1,11 @@
-# Character packs
+<div dir="rtl">
 
-A pack is a folder in `packs\` with a `pack.json`. It shows up as its own kit in the
-**Choose character…** gallery and in the tray's Character menu. No code changes needed.
+# חבילות דמויות
+
+חבילה היא תיקייה בתוך `packs\` עם קובץ `pack.json`. היא מופיעה כקטגוריה משלה בגלריית
+**בחירת דמות…** ובתפריט "דמות" שליד השעון. לא צריך לשנות קוד.
+
+</div>
 
 ```
 packs\
@@ -10,7 +14,11 @@ packs\
     bagel.png      (only for sticker-image characters)
 ```
 
+<div dir="rtl">
+
 ## pack.json
+
+</div>
 
 ```json
 {
@@ -32,45 +40,47 @@ packs\
 }
 ```
 
-Every character gets arms, legs, blinking and all the exercise animations automatically.
+<div dir="rtl">
 
-### Two kinds of character
+כל דמות מקבלת אוטומטית ידיים, רגליים, מצמוץ וכל אנימציות התרגילים.
 
-| Kind | Fields | Notes |
+### שני סוגי דמויות
+
+| סוג | שדות | הערות |
 |---|---|---|
-| **Sticker image** (like a WhatsApp sticker) | `image`: PNG file in the pack folder | Transparent background works best. Set `"face": false` if the art already has a face. |
-| **Vector** | `shape`: SVG path data, `colors`: 3 colors (left, highlight, right) | Optional `detail`: extra XAML shapes drawn on the body. |
+| **תמונת סטיקר** (כמו סטיקר בוואטסאפ) | `image`: קובץ PNG בתיקיית החבילה | הכי טוב עם רקע שקוף. אם לציור כבר יש פנים: `"face": false`. |
+| **ציור וקטורי** | `shape`: נתיב SVG, `colors`: 3 צבעים (שמאל, הדגשה, ימין) | אופציונלי: `detail` – צורות XAML נוספות שמצוירות על הגוף. |
 
-The body lives in a 110×160 box: keep it roughly inside x 14–96, y 10–134.
-The face sits around (56, 65), shoulders at y 72, hips at (44, 124) and (66, 124).
+הגוף נמצא בתוך קופסה של 110×160: כדאי להישאר בערך בתוך x 14–96, y 10–134.
+הפנים בערך ב-(56, 65), הכתפיים בגובה y 72, והירכיים ב-(44, 124) וב-(66, 124).
 
-### Optional style fields
+### שדות עיצוב אופציונליים
 
-| Field | Values |
+| שדה | ערכים |
 |---|---|
-| `eyes` | `dots` (default), `googly` |
-| `mouth` | `smile` (default), `lips` |
-| `hands` | `mitt` (default), `glove` (white cartoon gloves), `felt` (puppet mitten with a thumb) |
-| `limbColor` | hex color for the arms instead of black ink, e.g. `"#D6A25A"` for felt puppet arms |
-| `mouth` also | `beak` (with a wattle, like the turkey) |
-| `back` | extra XAML drawn *behind* the body (tail feathers, leaves) |
-| `face` | `false` to hide the drawn face (for sticker images that have one) |
-| `ax` | number: pull shoulders inward for narrow bodies (e.g. `10`) |
+| `eyes` | `dots` (ברירת מחדל), `googly` (עיניים בולטות) |
+| `mouth` | `smile` (ברירת מחדל), `lips` (שפתיים אדומות), `beak` (מקור עם כרבולת, כמו ההודו) |
+| `hands` | `mitt` (ברירת מחדל), `glove` (כפפות לבנות מצוירות), `felt` (כפפת בובה מלבד עם אגודל) |
+| `limbColor` | צבע הקס לידיים במקום דיו שחורה, למשל `"#D6A25A"` לידיים של בובה |
+| `back` | XAML נוסף שמצויר *מאחורי* הגוף (נוצות זנב, עלים) |
+| `face` | `false` כדי להסתיר את הפנים המצוירות (לתמונות סטיקר שיש בהן פנים) |
+| `ax` | מספר: מקרב את הכתפיים פנימה בגופים צרים (למשל `10`) |
 
-Pack-level option: `"first": true` shows the pack first in the gallery and makes its first character the default.
+אפשרות ברמת החבילה: `"first": true` מציגה את החבילה ראשונה בגלריה והופכת את הדמות הראשונה שלה לברירת המחדל.
 
-## Sharing a pack
+## לשתף חבילה
 
-Zip the pack folder (the zip must contain `pack.json`). Anyone can install it from the tray:
-**Character > Add character pack…**
+מכווצים את תיקיית החבילה ל-zip (ה-zip חייב להכיל `pack.json`). כל אחד יכול להוסיף אותה מהתפריט שליד השעון:
+**דמות ← הוספת חבילת דמויות…**
 
-For safety, packs are checked before loading: `detail`/`back` may only use drawing elements
-(Canvas, Ellipse, Rectangle, Path, Line, Polygon, TextBlock and transforms), no `{...}` markup
-extensions; colors must be hex; images must be PNG/JPG inside the pack folder. Anything else
-makes that character get skipped.
+לשם אבטחה, החבילות נבדקות לפני הטעינה: ב-`detail`/`back` מותר להשתמש רק ברכיבי ציור
+(Canvas, Ellipse, Rectangle, Path, Line, Polygon, TextBlock וטרנספורמציות), בלי ביטויי `{...}`;
+הצבעים חייבים להיות בפורמט הקס; התמונות חייבות להיות PNG/JPG בתוך תיקיית החבילה. כל דבר אחר
+גורם לכך שהדמות תדולג.
 
-## Copyright
+## זכויות יוצרים
 
-Only add art you have the right to use. Sticker packs you find online belong to their
-artists: don't commit them to a public repo without permission. Your own `packs\` folders
-stay on your machine unless you choose to share them.
+מוסיפים רק ציורים שיש לכם זכות להשתמש בהם. חבילות סטיקרים שמוצאים ברשת שייכות לאמנים שלהן:
+אל תעלו אותן למאגר ציבורי בלי רשות. תיקיות ה-`packs\` שלכם נשארות על המחשב שלכם, אלא אם תבחרו לשתף אותן.
+
+</div>

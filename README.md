@@ -1,94 +1,111 @@
-# Stretch Buddy 🧆🍝🕎
+<div dir="rtl">
 
-**[עברית](README.he.md)** · English
+# חבר מתיחות 🧆🍝🕎
 
-A cute desktop buddy for Windows that reminds you to stretch, drink water, get up and rest your eyes
-while you work at the computer. Animated characters act out each exercise, so you just copy them.
+עברית · **[English](README.en.md)**
 
-*Inspired by Claude's "Tony the Rigatoni" demo. Built with Claude Code.*
+חבר קטן וחמוד למחשב (Windows) שמזכיר לך להתמתח, לשתות מים, לקום ולתת מנוחה לעיניים בזמן העבודה.
+דמויות מונפשות מדגימות כל תרגיל, ואתם פשוט עושים כמוהן.
 
-### [⬇️ Download StretchBuddy-Setup.exe](https://github.com/tzvik/Falafel-strech-buddy/releases/latest/download/StretchBuddy-Setup.exe)
+### [⬇️ להורדת התוכנה (StretchBuddy-Setup.exe)](https://github.com/tzvik/Falafel-strech-buddy/releases/latest/download/StretchBuddy-Setup.exe)
 
-![Reminder](docs/reminder.png)
+![תזכורת](docs/reminder-he.png)
 
-## Install (Windows 10 / 11)
+## התקנה (Windows 10 / 11)
 
-1. **Download** [StretchBuddy-Setup.exe](https://github.com/tzvik/Falafel-strech-buddy/releases/latest/download/StretchBuddy-Setup.exe).
-2. **Double-click it.**
-   Windows may say *"Windows protected your PC"* because the installer isn't code-signed yet.
-   Click **More info** → **Run anyway**.
-3. A welcome message appears. Done. Look for the little rigatoni **next to the clock**
-   (click the `^` arrow if it's hidden). **Right-click it** for settings, **double-click** for a reminder right now.
+1. **מורידים** את [StretchBuddy-Setup.exe](https://github.com/tzvik/Falafel-strech-buddy/releases/latest/download/StretchBuddy-Setup.exe).
+2. **לוחצים עליו פעמיים.**
+   ייתכן ש-Windows יציג הודעה *"Windows protected your PC"* (המחשב שלך מוגן), כי התוכנה עדיין לא חתומה דיגיטלית.
+   לוחצים על **More info** (מידע נוסף) ← **Run anyway** (הפעל בכל זאת).
+3. נפתח **אשף קצר של ברוכים הבאים** (אפשר גם ללחוץ "דלג"):
+   בוחרים דמות ← מסמנים על מה להזכיר ← בוחרים כל כמה זמן והאם להשמיע צליל.
+4. זהו. האייקון של החבר מחכה **ליד השעון** (אם הוא מוסתר, לוחצים על החץ `^`).
+   **לחיצה ימנית** עליו פותחת את ההגדרות, **לחיצה כפולה** מקפיצה תזכורת מיד.
 
-No admin rights needed. It installs for your user only, starts with Windows, and can be removed from
-**Settings → Apps → Installed apps → Stretch Buddy → Uninstall**.
+לא צריך הרשאות מנהל. התוכנה מותקנת רק למשתמש שלך ועולה אוטומטית עם Windows.
+להסרה: **הגדרות ← אפליקציות ← אפליקציות מותקנות ← Stretch Buddy ← הסרת התקנה**.
 
-## What it does
+## אשף ההגדרה
 
-- About **every 45 minutes**, give or take a little (ergonomics guidance: move every 30-60 min of sitting;
-  drink little and often). Adjustable: ~30 min / 45 min / 1h / 1.5h / 2h.
-- A short toast ("It's time to **stretch!**"), then a card with **one** exercise. The character demos it live.
-- Orange **arrows** show which way to move; for moves a front view can't show (chin tucks, upper-back stretch)
-  a small **side-view bubble** shows it.
-- The reminder **stays on screen until you act on it**. One button: **Done**. You get a green
-  "Nice! That's 3 today", a happy character, and now and then a burst of **confetti**. **✕** dismisses it.
-- 19 exercises: upper-back stretch, chin tucks, neck stretch, neck turns, shoulder rolls, arms wide, seated twist,
-  wrist & finger stretch, hand shake-out, eye break (20-20-20), deep breaths, calf raises, stand up,
-  turn around & walk, walkaround, water breaks.
-- Each card is about one thing only, with a matching tip (posture / water / eyes / movement).
-- Gentle sounds that match the reminder: water pouring, a soft creak for stretches, a little "level up" for
-  get-up breaks, an "ahh" for eye rest.
-- **Drag** the popup to any screen; it remembers the spot.
-- **Hebrew and English** (right-to-left supported).
+בהתקנה הראשונה נפתח אשף של שלושה צעדים. אפשר לפתוח אותו שוב בכל זמן מהתפריט: **הגדרה מהירה…**
 
-![Celebration](docs/celebrate.png)
+| 1. מי יזכיר לך? | 2. על מה להזכיר? | 3. כל כמה זמן? |
+|---|---|---|
+| ![בחירת דמות](docs/wizard-he-1.png) | ![סוגי תזכורות](docs/wizard-he-2.png) | ![תדירות וצליל](docs/wizard-he-3.png) |
 
-![Poses](docs/poses.png)
+## מה זה עושה
 
-## Settings (right-click the tray icon)
+- **בערך כל 45 דקות**, פלוס מינוס קצת (לפי המלצות ארגונומיה: לזוז כל 30-60 דקות של ישיבה, ולשתות מעט ולעתים קרובות).
+  אפשר לשנות: בערך כל חצי שעה / 45 דקות / שעה / שעה וחצי / שעתיים.
+- הודעה קצרה ("הגיע הזמן **להתמתח!**"), ואז כרטיס עם תרגיל **אחד**. הדמות מדגימה אותו בזמן אמת.
+- **חיצים** כתומים מראים לאן לזוז. בתנועות שלא רואים מקדימה (הכנסת סנטר, מתיחת גב עליון)
+  **בועה קטנה במבט מהצד**, ליד הדמות, מראה את התנועה.
+- התזכורת **נשארת על המסך עד שמגיבים לה**. כפתור אחד: **עשיתי**. בלחיצה: "יפה מאוד! זה כבר 3 היום",
+  דמות שמחה, ומדי פעם **קונפטי**. **✕** סוגר אותה.
+- 19 תרגילים: מתיחת גב עליון, הכנסת סנטר, מתיחת צוואר, סיבובי צוואר, סיבובי כתפיים, ידיים לצדדים, פיתול בישיבה,
+  מתיחת שורש כף יד, ניעור ידיים, מנוחה לעיניים (20-20-20), נשימות עמוקות, עליות על בהונות, לקום,
+  להסתובב וללכת, סיבוב הליכה, ושתיית מים.
+- כל כרטיס עוסק בדבר אחד בלבד, עם טיפ מתאים (יציבה / מים / עיניים / תנועה). "איך עושים" פותח הסבר צעד אחר צעד.
+- צלילים עדינים שמתאימים לתזכורת: מים נשפכים לכוס, חריקה עדינה למתיחות, צליל "עלית שלב" להפסקות של קימה והליכה,
+  ו"אהה" רגוע למנוחת עיניים. אפשר להשתיק בלחיצה.
+- אפשר **לגרור** את החלון לכל מסך, והוא זוכר את המקום.
+- **עברית ואנגלית**.
 
-| Setting | Options |
+![חגיגה](docs/celebrate-he.png)
+
+![הדמויות בפעולה](docs/poses.png)
+
+## הגדרות (לחיצה ימנית על האייקון ליד השעון)
+
+| הגדרה | אפשרויות |
 |---|---|
-| Remind me now | shows a reminder immediately |
-| Character | pick one in the gallery, "rotating" within a kit, or "feeling lucky" (anyone) |
-| Language | English, עברית |
-| Reminder types | Stretches / Water / Get up & move / Eyes & breathing: each Often, Sometimes or Off |
-| How often | about every 30 min, 45 min (recommended), 1, 1.5 or 2 hours |
-| Pause for 1 hour, Mute sounds, Reset popup position, Exit | |
+| להזכיר עכשיו | מקפיץ תזכורת מיד |
+| הגדרה מהירה… | פותח שוב את אשף ההגדרה |
+| דמות | לבחור דמות בגלריה, "מתחלף" בתוך קטגוריה, או "מה שיוצא (אני מרוצה)" |
+| שפה | עברית, English |
+| סוגי תזכורות | מתיחות / שתיית מים / לקום ולזוז / עיניים ונשימה: לכל אחד לעתים קרובות, מדי פעם או כבוי |
+| תדירות | בערך כל חצי שעה, 45 דקות (מומלץ), שעה, שעה וחצי או שעתיים |
+| הפסקה לשעה, השתקת צלילים, איפוס מיקום החלון, יציאה | |
 
-## The cast
+## הדמויות
 
-- **Israeli street food** (default): Falafel, Shawarma, Surprise Bourekas, Half Portion, Sabich
-- **Hanukkah**: Sufganiya, Dreidel, Menorah, Candle
-- **Thanksgiving**: Pumpkin, Turkey, Corn, Pumpkin Pie
-- **Pasta**: Rigatoni, Penne, Farfalle, Ravioli, Spaghetti, Lasagna
-- **Bakery** (example pack): Bagel, Pita
+- **אוכל רחוב ישראלי** (ברירת מחדל): פלאפל, שווארמה, בורקס הפתעות, חצי מנה, סביח
+- **חנוכה**: סופגנייה, סביבון, חנוכייה, נר
+- **חג ההודיה**: דלעת, הודו, תירס, פאי דלעת
+- **פסטה**: ריגטוני, פנה, פרפאלה, רביולי, ספגטי, לזניה
+- **מאפייה** (חבילת דוגמה): בייגלה, פיתה
 
-![Gallery](docs/gallery.png)
+![גלריה](docs/gallery-he.png)
 
-### Add your own characters
+### להוסיף דמויות משלכם
 
-Like a WhatsApp sticker pack: a folder with a `pack.json` and either sticker PNGs or simple vector shapes.
-Every character automatically gets arms, legs, blinking and all the exercise animations.
-Zip the folder to share it; others add it from the tray: **Character → Add character pack…**
-Packs are checked before loading, so a shared pack can't run code. See [packs/README.md](packs/README.md).
+כמו חבילת סטיקרים בוואטסאפ: תיקייה עם קובץ `pack.json` ותמונות PNG או צורות פשוטות.
+כל דמות מקבלת אוטומטית ידיים, רגליים, מצמוץ וכל אנימציות התרגילים.
+כדי לשתף, מכווצים את התיקייה ל-zip; אחרים מוסיפים אותה מהתפריט: **דמות ← הוספת חבילת דמויות…**
+החבילות נבדקות לפני הטעינה, כך שחבילה משותפת לא יכולה להריץ קוד. פרטים: [packs/README.md](packs/README.md).
 
-## For developers
+אפשר גם לשים קובץ `tray-icon.png` בתיקיית התוכנה כדי להחליף את האייקון שליד השעון.
 
-Plain PowerShell + WPF, nothing to install.
+## למפתחים
 
-| File | What |
+PowerShell ו-WPF בלבד, אין מה להתקין.
+
+| קובץ | מה יש בו |
 |---|---|
-| `rigatoni.ps1` | the reminder popup, characters, animations, gallery |
-| `tray.ps1` | tray icon, timer and settings menu |
-| `i18n.json` | all text (English, Hebrew) |
-| `packs\` | extra character kits |
-| `sounds\` | Pixabay recordings (`.mp3`, tuning in `sounds.json`, credits in [CREDITS.md](sounds/CREDITS.md)) + synthesized chimes |
-| `installer\` | `build.ps1` builds `dist\StretchBuddy-Setup.exe` with IExpress (built into Windows) |
+| `rigatoni.ps1` | חלון התזכורת, הדמויות, האנימציות, הגלריה ואשף ההגדרה |
+| `tray.ps1` | האייקון ליד השעון, הטיימר ותפריט ההגדרות |
+| `i18n.json` | כל הטקסטים (עברית, אנגלית) |
+| `packs\` | חבילות דמויות נוספות |
+| `sounds\` | הקלטות מ-Pixabay (`.mp3`, כיוונון ב-`sounds.json`, קרדיטים ב-[CREDITS.md](sounds/CREDITS.md)) וצלילים מסונתזים |
+| `installer\` | `build.ps1` בונה את `dist\StretchBuddy-Setup.exe` עם IExpress (מובנה ב-Windows) |
 
-Run from source: `powershell -ExecutionPolicy Bypass -File install.ps1` ·
-Preview: `rigatoni.ps1 -Demo drink -Who 8 -Lang he` · Gallery: `rigatoni.ps1 -Gallery`
+הרצה מהקוד: `powershell -ExecutionPolicy Bypass -File install.ps1` ·
+תצוגה מקדימה: `rigatoni.ps1 -Demo drink -Who 8 -Lang he` · גלריה: `rigatoni.ps1 -Gallery` · אשף: `rigatoni.ps1 -Setup`
 
-## License
+*בהשראת ההדגמה "Tony the Rigatoni" של Claude. נבנה עם Claude Code.*
 
-Code: MIT. Sounds: see [sounds/CREDITS.md](sounds/CREDITS.md).
+## רישיון
+
+קוד: MIT. צלילים: ראו [sounds/CREDITS.md](sounds/CREDITS.md).
+
+</div>

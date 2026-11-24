@@ -1,16 +1,20 @@
-# Sound credits
+<div dir="rtl">
 
-Recordings from [Pixabay](https://pixabay.com), used under the
-[Pixabay Content License](https://pixabay.com/service/license-summary/) (free to use in apps; not for resale as standalone files).
+# קרדיטים לצלילים
 
-| File | Used for | Source |
+ההקלטות לקוחות מ-[Pixabay](https://pixabay.com), בשימוש לפי
+[רישיון התוכן של Pixabay](https://pixabay.com/service/license-summary/) (מותר לשימוש בתוך אפליקציות; אסור למכור אותן כקבצים בפני עצמם).
+
+| קובץ | למה הוא משמש | מקור |
 |---|---|---|
-| `water.mp3` | water breaks | [Water Pouring](https://pixabay.com/sound-effects/film-special-effects-water-pouring-80316/) by freesound_community |
-| `stretch.mp3` | stretches | [Creak and Crack](https://pixabay.com/sound-effects/film-special-effects-creak-and-crack-252628/) by TanwerAman |
-| `move.mp3` | stand up / walk / turn around (break reminders) | [Level Up](https://pixabay.com/sound-effects/film-special-effects-level-up-47165/) by freesound_community |
-| `calm.mp3` | eye rest / breathing | [Ahh Relax SFX](https://pixabay.com/sound-effects/film-special-effects-ahh-relax-sfx-mrstokes302-447426/) by Mrstokes302 |
+| `water.mp3` | תזכורות שתייה | [Water Pouring](https://pixabay.com/sound-effects/film-special-effects-water-pouring-80316/) מאת freesound_community |
+| `stretch.mp3` | מתיחות | [Creak and Crack](https://pixabay.com/sound-effects/film-special-effects-creak-and-crack-252628/) מאת TanwerAman |
+| `move.mp3` | לקום / ללכת / להסתובב | [Level Up](https://pixabay.com/sound-effects/film-special-effects-level-up-47165/) מאת freesound_community |
+| `calm.mp3` | מנוחה לעיניים / נשימות | [Ahh Relax SFX](https://pixabay.com/sound-effects/film-special-effects-ahh-relax-sfx-mrstokes302-447426/) מאת Mrstokes302 |
 
-The `.wav` files (done chime, Hanukkah and Thanksgiving tunes, and fallbacks) are synthesized by
-`rigatoni.ps1 -MakeSounds` and are part of this project.
+קובצי ה-`.wav` (צליל הסיום, המנגינות של חנוכה וחג ההודיה, וצלילי גיבוי) נוצרים על ידי
+`rigatoni.ps1 -MakeSounds` והם חלק מהפרויקט.
 
-Playback start, length and volume for each recording: `sounds.json`.
+נקודת ההתחלה, האורך והעוצמה של כל הקלטה: `sounds.json`.
+
+</div>
