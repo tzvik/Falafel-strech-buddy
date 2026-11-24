@@ -57,6 +57,8 @@ The face sits around (56, 65), shoulders at y 72, hips at (44, 124) and (66, 124
 | `face` | `false` to hide the drawn face (for sticker images that have one) |
 | `ax` | number: pull shoulders inward for narrow bodies (e.g. `10`) |
 
+Pack-level option: `"first": true` shows the pack first in the gallery and makes its first character the default.
+
 ## Sharing a pack
 
 Zip the pack folder (the zip must contain `pack.json`). Anyone can install it from the tray:

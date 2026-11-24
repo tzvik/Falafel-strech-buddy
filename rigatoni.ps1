@@ -7,7 +7,9 @@
 #   ... -Snap C:\tmp\shot                 also save PNG frames (shot-0.png ...) and close - for testing
 #   rigatoni.ps1 -MakeSounds              (re)build the sounds\*.wav files
 #   ... -Finish                           (with -Demo) jump straight to the success celebration, with confetti
-param([string]$Demo, [int]$Who = -1, [string]$Lang, [switch]$Gallery, [string]$Snap, [switch]$MakeSounds, [switch]$Finish)
+#   rigatoni.ps1 -Setup                   first-run welcome wizard (character, reminder types, timing, sound)
+param([string]$Demo, [int]$Who = -1, [string]$Lang, [switch]$Gallery, [string]$Snap, [switch]$MakeSounds, [switch]$Finish, [switch]$Setup)
+if ($Setup) { $Gallery = [switch]$true }   # the wizard reuses the gallery's character tiles
 Add-Type -AssemblyName PresentationFramework
 
 $dir   = Split-Path $MyInvocation.MyCommand.Path
@@ -303,7 +305,8 @@ foreach ($pj in Get-ChildItem (Join-Path $dir 'packs') -Filter pack.json -Recurs
   foreach ($ch in $pk.characters) {
     $e = @{ kit = $kitId; id = "pack:${kitId}:$n"   # stable id, so adding packs never changes your pick
             kitNames = $pk.names; names = $ch.names; ax = [int]$ch.ax
-            eyes = $ch.eyes; hands = $ch.hands; mouth = $ch.mouth; noFace = ($ch.face -eq $false) }
+            eyes = $ch.eyes; hands = $ch.hands; mouth = $ch.mouth; noFace = ($ch.face -eq $false)
+            first = [bool]$pk.first }   # "first": true = shown first in the gallery and the default character
     if ("$($ch.limbColor)" -match '^#[0-9A-Fa-f]{6}$') {   # felt-colored arms; edge = same color, darker
       $e.limb = $ch.limbColor
       $rgb = [Convert]::ToInt32($ch.limbColor.Substring(1), 16)
@@ -330,7 +333,10 @@ function Get-KitName($kit, $L) { if ($L.kits.$kit) { return $L.kits.$kit }
   if ($kn) { if ($kn.($st.lang)) { $kn.($st.lang) } else { $kn.en } } else { $kit } }
 
 # Character setting ("who" in state.json): an index, "kit:<name>" (random from that kit), or "random" (anyone).
-$whoSet = if ($j -and $j.who) { "$($j.who)" } else { 'kit:streetfood' }   # default on a fresh install: Israeli street food
+# default (nothing picked yet): a pack marked "first", else Israeli street food
+$pinned = @($cast | ? { $_.first } | % { $_.kit } | Select-Object -Unique)
+$defaultWho = if ($pinned) { ($cast | ? { $_.first } | Select-Object -First 1).id } else { 'kit:streetfood' }
+$whoSet = if ($j -and $j.who) { "$($j.who)" } else { $defaultWho }
 $whoIdx = if ($Who -ge 0) { $Who % $cast.Count }
           elseif ($whoSet -match '^\d+$') { [int]$whoSet % $cast.Count }
           elseif ($whoSet -like 'pack:*' -and ($hit = @(0..($cast.Count-1) | ? { $cast[$_].id -eq $whoSet }))) { $hit[0] }
@@ -582,7 +588,7 @@ if ($Gallery) {
       $(& $pips (@(63,65),@(85,65),@(63,87),@(85,87)))</Canvas>
   </Canvas></Viewbox>"
   $body = & $section '' (Tile 'random' $lucky $L.ui.random)   # "feeling lucky" sits alone on the first row
-  $first = 'streetfood', 'hanukkah', 'thanksgiving'   # default kit first
+  $first = @($pinned) + @('streetfood', 'hanukkah', 'thanksgiving')   # packs marked "first", then the built-in order
   $kits = @($first) + @($cast | % { $_.kit } | Select-Object -Unique | ? { $_ -notin $first })
   foreach ($kit in $kits) {     # one section per kit
     $kname = Get-KitName $kit $L
@@ -593,6 +599,126 @@ if ($Gallery) {
     $body += & $section $kname $row
   }
   $tiles = $body
+
+  # ============ FIRST-RUN WIZARD: 1 character -> 2 reminder types -> 3 timing + sound. Skip / X keep the defaults ============
+  if ($Setup) {
+    $u = $L.ui
+    $catOrder = 'stretch', 'water', 'move', 'eyes'
+    $catIcon = @{ stretch = '&#x1F938;'; water = '&#x1F4A7;'; move = '&#x1F6B6;'; eyes = '&#x1F440;' }
+    $chk = { param($n) "<Border x:Name='$n' Width='24' Height='24' CornerRadius='12' BorderThickness='2' VerticalAlignment='Center'><TextBlock Text='&#x2713;' Foreground='White' FontWeight='Bold' FontSize='13' HorizontalAlignment='Center' VerticalAlignment='Center'/></Border>" }
+    $typeCards = ($catOrder | % { "<Border x:Name='Type_$_' Tag='$_' Margin='6' Padding='14,12' CornerRadius='16' BorderThickness='2' Cursor='Hand'><DockPanel>
+        <ContentControl DockPanel.Dock='Right'>$(& $chk "Chk_$_")</ContentControl>
+        <TextBlock DockPanel.Dock='Left' Text='$($catIcon[$_])' FontFamily='Segoe UI Emoji' FontSize='26' VerticalAlignment='Center' Margin='0,0,12,0'/>
+        <StackPanel><TextBlock Text='$(& $esc $u.cats.$_)' FontSize='16' FontWeight='Bold' Foreground='#1A1A1A'/>
+        <TextBlock Text='$(& $esc $u.catDesc.$_)' FontSize='12.5' Foreground='#777' TextWrapping='Wrap'/></StackPanel></DockPanel></Border>" }) -join ''
+    $freqOpts = 30, 45, 60, 90, 120
+    $freqPills = (0..4 | % { "<Border x:Name='Freq_$($freqOpts[$_])' Tag='$($freqOpts[$_])' Margin='6,3' Padding='16,9' CornerRadius='12' BorderThickness='2' Cursor='Hand'>
+        <TextBlock Text='$(& $esc $u.freq[$_])' FontSize='14.5' FontWeight='SemiBold' Foreground='#1A1A1A'/></Border>" }) -join ''
+    [xml]$wx = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent" SizeToContent="WidthAndHeight" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen" Topmost="True" FontFamily="Segoe UI" Title="Stretch Buddy">
+ <Grid Margin="20">
+  <Border Background="White" CornerRadius="24" Padding="26,22,26,20">
+   <Border.Effect><DropShadowEffect BlurRadius="26" ShadowDepth="3" Opacity="0.22"/></Border.Effect>
+   <StackPanel Width="800">
+    <DockPanel x:Name="Hdr" Background="Transparent">
+     <Border DockPanel.Dock="Left" Width="96" Height="108" Background="#F1EBE2" CornerRadius="18" Padding="6">$(New-Noodle 'H' $cast[$whoIdx])</Border>
+     <StackPanel Margin="18,8,30,0" VerticalAlignment="Center">
+      <TextBlock Text="$(& $esc $u.setupTitle)" FontSize="27" FontWeight="Bold" Foreground="#1A1A1A"/>
+      <TextBlock Text="$(& $esc $u.setupSub)" FontSize="14" Foreground="#6B645D" TextWrapping="Wrap" Margin="0,4,0,0"/>
+     </StackPanel>
+    </DockPanel>
+    <StackPanel Orientation="Horizontal" Margin="0,20,0,2">
+     <Ellipse x:Name="Dot1" Width="11" Height="11" Margin="0,0,6,0"/><Ellipse x:Name="Dot2" Width="11" Height="11" Margin="0,0,6,0"/><Ellipse x:Name="Dot3" Width="11" Height="11"/>
+     <TextBlock x:Name="StepTitle" FontSize="19" FontWeight="Bold" Foreground="#1A1A1A" Margin="12,0,0,0" VerticalAlignment="Center"/>
+    </StackPanel>
+    <TextBlock x:Name="StepSub" FontSize="13" Foreground="#888" Margin="0,2,0,8"/>
+    <Grid Height="370">
+     <ScrollViewer x:Name="P1" VerticalScrollBarVisibility="Auto"><StackPanel>$tiles</StackPanel></ScrollViewer>
+     <UniformGrid x:Name="P2" Columns="2" Visibility="Collapsed" VerticalAlignment="Top">$typeCards</UniformGrid>
+     <Grid x:Name="P3" Visibility="Collapsed">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <StackPanel>$freqPills</StackPanel>
+      <Border x:Name="SoundT" Grid.Column="1" Margin="18,3,6,0" Padding="16,14" CornerRadius="16" BorderThickness="2" Cursor="Hand" VerticalAlignment="Top"><DockPanel>
+        <ContentControl DockPanel.Dock="Right">$(& $chk 'Chk_sound')</ContentControl>
+        <TextBlock DockPanel.Dock="Left" Text="&#x1F514;" FontFamily="Segoe UI Emoji" FontSize="26" VerticalAlignment="Center" Margin="0,0,12,0"/>
+        <StackPanel><TextBlock Text="$(& $esc $u.sound)" FontSize="16" FontWeight="Bold" Foreground="#1A1A1A"/>
+        <TextBlock Text="$(& $esc $u.soundSub)" FontSize="12.5" Foreground="#777" TextWrapping="Wrap"/></StackPanel></DockPanel></Border>
+     </Grid>
+    </Grid>
+    <DockPanel Margin="0,16,0,0">
+     <TextBlock x:Name="Skip" DockPanel.Dock="Left" Text="$(& $esc $u.skip)" Foreground="#8A8178" FontSize="14.5" VerticalAlignment="Center" Cursor="Hand" TextDecorations="Underline"/>
+     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button x:Name="Back" Content="$(& $esc $u.back)" Background="#ECEAE6" Foreground="#1A1A1A" FontSize="14.5" FontWeight="SemiBold" Cursor="Hand" Margin="0,0,10,0">
+       <Button.Template><ControlTemplate TargetType="Button"><Border Background="{TemplateBinding Background}" CornerRadius="18" Padding="22,9"><ContentPresenter HorizontalAlignment="Center"/></Border></ControlTemplate></Button.Template></Button>
+      <Button x:Name="Next" Background="#1A1A1A" Foreground="White" FontSize="14.5" FontWeight="SemiBold" Cursor="Hand">
+       <Button.Template><ControlTemplate TargetType="Button"><Border Background="{TemplateBinding Background}" CornerRadius="18" Padding="26,9"><ContentPresenter HorizontalAlignment="Center"/></Border></ControlTemplate></Button.Template></Button>
+     </StackPanel>
+    </DockPanel>
+   </StackPanel>
+  </Border>
+  <Border x:Name="WX" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-9,-9,0" Width="28" Height="28" CornerRadius="14" Background="White" BorderBrush="#E4DED6" BorderThickness="1" Cursor="Hand">
+   <Border.Effect><DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.25"/></Border.Effect>
+   <TextBlock Text="&#x2715;" FontSize="12" FontWeight="Bold" Foreground="#8A8178" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+  </Border>
+ </Grid>
+</Window>
+"@
+    $script:win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $wx))
+    if ($L.rtl) { $win.FlowDirection = 'RightToLeft' }
+    $F = { param($n) $win.FindName($n) }
+    $ACC = '#D9541E'; $NOPE = 'Transparent'   # (not $on/$off: PowerShell names ignore case)
+    # current choices (start from defaults / existing settings)
+    $script:sel = $whoSet
+    if ($script:sel -like 'kit:*') { $m = @($cast | ? { $_.kit -eq $script:sel.Substring(4) }); if ($m.Count -eq 1 -and $m[0].id) { $script:sel = $m[0].id } }
+    $script:on = @{}; foreach ($c in $catOrder) { $script:on[$c] = ($weights[$c] -gt 0) }
+    $script:on.eyes = $true   # first run: everything on, uncheck what you don't want
+    $script:every = if ($j -and [int]$j.every -gt 0) { [int]$j.every } else { 45 }
+    $script:sound = -not $script:muted
+    function Paint-Card($card, $chkName, $isOn) {
+      $card.BorderBrush = if ($isOn) { $ACC } else { $NOPE }; $card.Background = if ($isOn) { '#FFF4EC' } else { '#F4F1EC' }
+      $c = & $F $chkName; $c.Background = if ($isOn) { '#2EA44F' } else { 'White' }; $c.BorderBrush = if ($isOn) { '#2EA44F' } else { '#CFC7BD' } }
+    function Paint-All {
+      foreach ($c in $catOrder) { Paint-Card (& $F "Type_$c") "Chk_$c" $script:on[$c] }
+      foreach ($m in $freqOpts) { $b = & $F "Freq_$m"; $isOn = ($m -eq $script:every)
+        $b.BorderBrush = if ($isOn) { $ACC } else { $NOPE }; $b.Background = if ($isOn) { '#FFF4EC' } else { '#F4F1EC' } }
+      Paint-Card (& $F 'SoundT') 'Chk_sound' $script:sound }
+    $tileEls = 1..$script:nTiles | % { $win.FindName("Tile$_") }
+    function Show-Sel { foreach ($t in $tileEls) { $t.BorderBrush = if ($t.Tag -eq $script:sel) { $ACC } else { $NOPE } } }
+    foreach ($t in $tileEls) { $t.Add_MouseLeftButtonUp({ param($s) $script:sel = $s.Tag; Show-Sel }) }
+    foreach ($c in $catOrder) { (& $F "Type_$c").Add_MouseLeftButtonUp({ param($s) $script:on[$s.Tag] = -not $script:on[$s.Tag]; Paint-All }) }
+    foreach ($m in $freqOpts) { (& $F "Freq_$m").Add_MouseLeftButtonUp({ param($s) $script:every = [int]$s.Tag; Paint-All }) }
+    (& $F 'SoundT').Add_MouseLeftButtonUp({ $script:sound = -not $script:sound; Paint-All })
+    $script:step = 1
+    function Show-Step {
+      foreach ($k in 1..3) { (& $F "P$k").Visibility = if ($k -eq $script:step) { 'Visible' } else { 'Collapsed' }
+                             (& $F "Dot$k").Fill = if ($k -le $script:step) { $ACC } else { '#E3DCD3' } }
+      (& $F 'StepTitle').Text = $u."step$($script:step)"; (& $F 'StepSub').Text = $u."step$($script:step)sub"
+      (& $F 'Back').Visibility = if ($script:step -gt 1) { 'Visible' } else { 'Collapsed' }
+      (& $F 'Next').Content = if ($script:step -lt 3) { $u.next } else { $u.finish } }
+    function Close-Setup($save) {
+      if ($save) {
+        $t = @{}; foreach ($c in $catOrder) { $t[$c] = if ($script:on[$c]) { @{ stretch = 2; water = 2; move = 1; eyes = 1 }[$c] } else { 0 } }
+        Save-State @{ who = $script:sel; types = $t; every = $script:every; mute = (-not $script:sound); setupDone = $true }
+      } else { Save-State @{ setupDone = $true } }   # skip: keep the defaults
+      $win.Close() }
+    (& $F 'Next').Add_Click({ if ($script:step -lt 3) { $script:step++; Show-Step } else { Close-Setup $true } })
+    (& $F 'Back').Add_Click({ if ($script:step -gt 1) { $script:step--; Show-Step } })
+    (& $F 'Skip').Add_MouseLeftButtonUp({ Close-Setup $false })
+    (& $F 'WX').Add_MouseLeftButtonUp({ Close-Setup $false })
+    (& $F 'Hdr').Add_MouseLeftButtonDown({ $win.DragMove() })
+    Show-Sel; Paint-All; Show-Step
+    $win.Add_Loaded({ Alive H; Wave H; for ($i = 0; $i -lt $cast.Count; $i++) { Alive "G$i"; Wave "G$i" }
+      M Dice1 A @(-22,-22,-8,-30,-22) 2.6; M Dice2 A @(0,0,12,-6,0) 2.6 })
+    if ($Snap) {   # test: one frame per step
+      $script:snapStep = 0; $tt = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval = [TimeSpan]::FromSeconds(1.2) }
+      $tt.Add_Tick({ Save-Frame $script:snapStep; $script:snapStep++
+        if ($script:snapStep -ge 3) { $win.Close() } else { $script:step = $script:snapStep + 1; Show-Step } }); $tt.Start() }
+    $win.ShowDialog() | Out-Null
+    return
+  }
+
   [xml]$gx = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="$([Security.SecurityElement]::Escape($L.ui.chooseChar))" SizeToContent="WidthAndHeight" ResizeMode="NoResize"

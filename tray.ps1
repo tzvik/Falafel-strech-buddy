@@ -83,6 +83,7 @@ function Add-Pack {
     $ni.ShowBalloonTip(4000, 'Stretch Buddy', $L.ui.packOk, 'Info'); Show-Gallery
   } catch { if ($zip) { $zip.Dispose() }; [System.Windows.Forms.MessageBox]::Show("$($L.ui.packBad)`n$($_.Exception.Message)") | Out-Null }
 }
+function Show-Setup { Start-Process wscript.exe -ArgumentList "`"$dir\launch.vbs`" rigatoni.ps1 -Setup" }
 function Show-Gallery  { Start-Process wscript.exe -ArgumentList "`"$dir\launch.vbs`" rigatoni.ps1 -Gallery" }
 function Update-Tip { $L = Get-L
   $ni.Text = if ((Get-PausedUntil) -gt (Get-Date)) { $L.ui.tipPaused }
@@ -101,11 +102,12 @@ $menu.Add_Opening({
   $s = Get-State; $L = Get-L; $menu.Items.Clear()
   $menu.RightToLeft = if ($L.rtl) { 'Yes' } else { 'No' }
   Add-Item $menu $L.ui.remindNow $null $false { Show-Reminder; Update-Tip } | Out-Null
+  Add-Item $menu $L.ui.setupAgain $null $false { Show-Setup } | Out-Null
   [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
   # character: the gallery picks a specific one; here are the random options (default = Hanukkah kit)
   $ch = Add-Item $menu $L.ui.character $null $false $null
-  $who = if ($s.who) { "$($s.who)" } else { 'kit:streetfood' }
+  $who = if ($s.who) { "$($s.who)" } else { 'kit:streetfood' }   # (a pack marked "first" is the popup's default)
   Add-Item $ch $L.ui.chooseChar $null $false { Show-Gallery } | Out-Null
   [void]$ch.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
   Add-Item $ch $L.ui.random 'random' ($who -eq 'random') { param($o) Set-State @{ who = 'random' } } | Out-Null
@@ -172,6 +174,9 @@ $timer.Add_Tick({
   } catch { Write-Log "ERROR in timer: $($_.Exception.Message)" }
 })
 $timer.Start(); Update-Tip
+
+# first run: open the welcome wizard once (marked right away, so restarts never open it twice)
+if (-not (Get-State).setupDone) { Set-State @{ setupDone = $true }; Write-Log 'first run: setup wizard'; Show-Setup }
 
 [System.Windows.Forms.Application]::Run()
 $ni.Dispose()
