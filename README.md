@@ -7,13 +7,11 @@
 חבר קטן וחמוד למחשב (Windows) שמזכיר לך להתמתח, לשתות מים, לקום ולתת מנוחה לעיניים בזמן העבודה.
 דמויות מונפשות מדגימות כל תרגיל, ואתם פשוט עושים כמוהן.
 
-### [⬇️ להורדת התוכנה (StretchBuddy-Setup.exe)](https://github.com/tzvik/Falafel-strech-buddy/releases/latest/download/StretchBuddy-Setup.exe)
-
 ![תזכורת](docs/reminder-he.png)
 
 ## התקנה (Windows 10 / 11)
 
-1. **מורידים** את [StretchBuddy-Setup.exe](https://github.com/tzvik/Falafel-strech-buddy/releases/latest/download/StretchBuddy-Setup.exe).
+1. **מורידים** את קובץ ההתקנה `StretchBuddy-Setup.exe` מאזור **Releases** בצד של עמוד המאגר.
 2. **לוחצים עליו פעמיים.**
    ייתכן ש-Windows יציג הודעה *"Windows protected your PC"* (המחשב שלך מוגן), כי התוכנה עדיין לא חתומה דיגיטלית.
    לוחצים על **More info** (מידע נוסף) ← **Run anyway** (הפעל בכל זאת).

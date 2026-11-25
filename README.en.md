@@ -7,13 +7,11 @@ while you work at the computer. Animated characters act out each exercise, so yo
 
 *Inspired by Claude's "Tony the Rigatoni" demo. Built with Claude Code.*
 
-### [⬇️ Download StretchBuddy-Setup.exe](https://github.com/tzvik/Falafel-strech-buddy/releases/latest/download/StretchBuddy-Setup.exe)
-
 ![Reminder](docs/reminder.png)
 
 ## Install (Windows 10 / 11)
 
-1. **Download** [StretchBuddy-Setup.exe](https://github.com/tzvik/Falafel-strech-buddy/releases/latest/download/StretchBuddy-Setup.exe).
+1. **Download** the installer `StretchBuddy-Setup.exe` from the **Releases** section on the side of the repository page.
 2. **Double-click it.**
    Windows may say *"Windows protected your PC"* because the installer isn't code-signed yet.
    Click **More info** → **Run anyway**.
