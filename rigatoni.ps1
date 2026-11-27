@@ -8,8 +8,9 @@
 #   rigatoni.ps1 -MakeSounds              (re)build the sounds\*.wav files
 #   ... -Finish                           (with -Demo) jump straight to the success celebration, with confetti
 #   rigatoni.ps1 -Setup                   first-run welcome wizard (character, reminder types, timing, sound)
-param([string]$Demo, [int]$Who = -1, [string]$Lang, [switch]$Gallery, [string]$Snap, [switch]$MakeSounds, [switch]$Finish, [switch]$Setup)
-if ($Setup) { $Gallery = [switch]$true }   # the wizard reuses the gallery's character tiles
+#   rigatoni.ps1 -Stats                   progress: today + the last 7 days
+param([string]$Demo, [int]$Who = -1, [string]$Lang, [switch]$Gallery, [string]$Snap, [switch]$MakeSounds, [switch]$Finish, [switch]$Setup, [switch]$Stats)
+if ($Setup -or $Stats) { $Gallery = [switch]$true }   # these windows never advance the reminder rotation
 Add-Type -AssemblyName PresentationFramework
 
 $dir   = Split-Path $MyInvocation.MyCommand.Path
@@ -37,6 +38,10 @@ try { $j = Get-Content $state -Raw -ErrorAction Stop | ConvertFrom-Json; $st.idx
       if ($j.date -eq $today) { $st.count = [int]$j.count } } catch {}
 if ($Lang) { $st.lang = $Lang }
 if (-not $I.($st.lang)) { $st.lang = 'en' }
+# one reminder at a time: if one is still on screen (e.g. you were away), don't stack another on top
+if (-not $Demo -and -not $Gallery -and -not $Snap) {
+  $popupMutex = New-Object System.Threading.Mutex($false, 'Local\StretchBuddyPopup')
+  if (-not $popupMutex.WaitOne(0)) { return } }
 # Schedule (popups ~every 30 min): WATER whenever >= 55 min have passed since the last water break
 # (so every 2nd popup ~ every 60 min, up to ~90 at slower paces); every other popup is stretch / move / eyes,
 # i.e. you get up and move every 30-60 min. Reminder types (tray): weight 2 = often, 1 = sometimes, 0 = off.
@@ -63,19 +68,27 @@ function Select-Exercise {
   $exercises | ? { $_.k -eq $key } | Select-Object -First 1
 }
 # Re-read before writing and touch only the given fields, so the popup/tray/gallery never clobber each other.
-function Save-State($changes, [switch]$AddDone) {
+function Save-State($changes, [switch]$AddDone, [string]$Hit) {
   $cur = @{}
   try { (Get-Content $state -Raw -ErrorAction Stop | ConvertFrom-Json).psobject.Properties | ForEach-Object { $cur[$_.Name] = $_.Value } } catch {}
   if ($cur.date -ne $today) { $cur.count = 0 }
   $cur.date = $today
   if ($AddDone) { $cur.count = [int]$cur.count + 1 }
+  if ($Hit) {   # progress history: history[yyyy-MM-dd][type] = how many done; kept for 60 days
+    $h = @{}
+    if ($cur.history) { $cur.history.psobject.Properties | % { $d = @{}; $_.Value.psobject.Properties | % { $d[$_.Name] = [int]$_.Value }; $h[$_.Name] = $d } }
+    if (-not $h[$today]) { $h[$today] = @{} }
+    $h[$today][$Hit] = [int]$h[$today][$Hit] + 1
+    $cutoff = (Get-Date).AddDays(-60).ToString('yyyy-MM-dd'); foreach ($k in @($h.Keys)) { if ($k -lt $cutoff) { $h.Remove($k) } }
+    $cur.history = $h }
   if ($changes) { foreach ($k in $changes.Keys) { $cur[$k] = $changes[$k] } }
-  $cur | ConvertTo-Json | Set-Content $state -Encoding utf8
+  $cur | ConvertTo-Json -Depth 6 | Set-Content $state -Encoding utf8
 }
 $ex = if ($Demo) { $exercises | ? { $_.k -eq $Demo } | Select-Object -First 1 }
       elseif ($Gallery) { $exercises[0] }
       else { Select-Exercise }
 if (-not $ex) { return }   # every reminder type switched off: nothing to show
+$exCat = @($cats.Keys | ? { $cats[$_] -contains $ex.k })[0]
 
 # ============ SOUNDS ============
 # Short, quiet, synthesized (no audio files to license). Built once into sounds\<kind>.wav, then just played.
@@ -560,6 +573,82 @@ function Start-Snaps([double[]]$at) {   # save a frame at each time (s), then cl
       Save-Frame $script:snapN; $script:snapN++; if ($script:snapN -ge $script:snapAt.Count) { $script:win.Close() } } })
   $t.Start() }
 
+# ============ PROGRESS (today + last 7 days) ============
+if ($Stats) {
+  $L = $I.($st.lang); $u = $L.ui; $E2 = { param($s) [Security.SecurityElement]::Escape("$s") }
+  $hc = { param($d, $c) if ($j -and $j.history -and $j.history.$d) { [int]$j.history.$d.$c } else { 0 } }
+  $order = 'water', 'stretch', 'move', 'eyes'
+  $icon = @{ water = '&#x1F4A7;'; stretch = '&#x1F938;'; move = '&#x1F6B6;'; eyes = '&#x1F440;' }
+  $cul = [Globalization.CultureInfo]::GetCultureInfo($(if ($st.lang -eq 'he') { 'he-IL' } else { 'en-US' }))
+  $day = { param($n) (Get-Date).AddDays(-$n).ToString('yyyy-MM-dd') }
+  $sum = { param($from, $to) $t = 0; foreach ($n in $from..$to) { foreach ($c in $order) { $t += & $hc (& $day $n) $c } }; $t }
+  # today: one card per type
+  $cards = ($order | % { $n = & $hc (& $day 0) $_
+    $extra = if ($_ -eq 'water') { "<TextBlock Text='$(& $E2 ($u.stGlasses -f $n, ($n * 240)))' FontSize='11.5' Foreground='#8A8178' HorizontalAlignment='Center'/>" } else { '' }
+    "<Border Margin='6' Padding='12,10' CornerRadius='16' Background='#F4F1EC'><StackPanel>
+      <TextBlock Text='$($icon[$_])' FontFamily='Segoe UI Emoji' FontSize='26' HorizontalAlignment='Center'/>
+      <TextBlock Text='$n' FontSize='34' FontWeight='Bold' Foreground='#1A1A1A' HorizontalAlignment='Center'/>
+      <TextBlock Text='$(& $E2 $u.cats.$_)' FontSize='13' Foreground='#6B645D' HorizontalAlignment='Center'/>$extra</StackPanel></Border>" }) -join ''
+  # last 7 days table (today on top), with a little bar for the day's total
+  $cols = "<Grid.ColumnDefinitions><ColumnDefinition Width='150'/><ColumnDefinition Width='72'/><ColumnDefinition Width='72'/><ColumnDefinition Width='72'/><ColumnDefinition Width='72'/><ColumnDefinition Width='60'/><ColumnDefinition Width='*'/></Grid.ColumnDefinitions>"
+  $cell = { param($col, $txt, $bold) "<TextBlock Grid.Column='$col' Text='$(& $E2 $txt)' FontSize='14' $(if ($bold) { "FontWeight='Bold'" }) Foreground='#1A1A1A' HorizontalAlignment='Center' VerticalAlignment='Center'/>" }
+  $rows = "<Grid Margin='0,0,0,4'>$cols<TextBlock Text='$(& $E2 $u.stDay)' FontSize='12.5' Foreground='#8A8178' VerticalAlignment='Center'/>" +
+          (($order | % { $i = 1 + [array]::IndexOf($order, $_); "<TextBlock Grid.Column='$i' Text='$($icon[$_])' FontFamily='Segoe UI Emoji' FontSize='18' HorizontalAlignment='Center' ToolTip='$(& $E2 $u.cats.$_)'/>" }) -join '') +
+          "<TextBlock Grid.Column='5' Text='$(& $E2 $u.stTotal)' FontSize='12.5' Foreground='#8A8178' HorizontalAlignment='Center' VerticalAlignment='Center'/></Grid>"
+  $max = [math]::Max(1, (0..6 | % { & $sum $_ $_ } | Measure-Object -Maximum).Maximum)
+  foreach ($n in 0..6) {
+    $d = (Get-Date).AddDays(-$n); $ds = & $day $n; $tot = & $sum $n $n
+    $label = if ($n -eq 0) { $u.stToday } else { "$($cul.DateTimeFormat.GetDayName($d.DayOfWeek)) $($d.ToString('d/M'))" }
+    $bg = if ($n % 2 -eq 0) { '#FAF8F5' } else { 'White' }
+    $rows += "<Border Background='$bg' CornerRadius='10' Padding='10,7' Margin='0,1'><Grid>$cols
+      <TextBlock Text='$(& $E2 $label)' FontSize='14' $(if ($n -eq 0) { "FontWeight='Bold'" }) Foreground='#1A1A1A' VerticalAlignment='Center'/>" +
+      (($order | % { & $cell (1 + [array]::IndexOf($order, $_)) (& $hc $ds $_) $false }) -join '') + (& $cell 5 $tot $true) +
+      "<Border Grid.Column='6' Height='10' CornerRadius='5' Background='#E8662A' HorizontalAlignment='Left' VerticalAlignment='Center' Margin='8,0,0,0' Width='$([int](140 * $tot / $max))'/></Grid></Border>"
+  }
+  # how this week compares with the one before
+  $week = & $sum 0 6; $prev = & $sum 7 13; $wWater = 0; foreach ($n in 0..6) { $wWater += & $hc (& $day $n) 'water' }
+  $line1 = $u.stWeekSum -f $week, $wWater, ([math]::Round($wWater * 0.24, 1))
+  $line2 = if ($prev -eq 0) { $u.stFirst } elseif ($week -gt $prev) { $u.stUp -f [int](100 * ($week - $prev) / $prev) }
+           elseif ($week -lt $prev) { $u.stDown -f [int](100 * ($prev - $week) / $prev) } else { $u.stSame }
+  [xml]$sx = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent" SizeToContent="WidthAndHeight" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen" Topmost="True" FontFamily="Segoe UI" Title="Stretch Buddy">
+ <Grid Margin="20">
+  <Border Background="White" CornerRadius="24" Padding="26,22">
+   <Border.Effect><DropShadowEffect BlurRadius="26" ShadowDepth="3" Opacity="0.22"/></Border.Effect>
+   <StackPanel Width="760">
+    <StackPanel x:Name="Hdr" Background="Transparent">
+     <TextBlock Text="$(& $E2 $u.stTitle)" FontSize="27" FontWeight="Bold" Foreground="#1A1A1A"/>
+     <TextBlock Text="$(& $E2 $u.stSub)" FontSize="14" Foreground="#6B645D" Margin="0,2,0,12"/>
+    </StackPanel>
+    <TextBlock Text="$(& $E2 $u.stToday)" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,0,0,4"/>
+    <UniformGrid Columns="4">$cards</UniformGrid>
+    <TextBlock Text="$(& $E2 $u.stWeek)" FontSize="17" FontWeight="Bold" Foreground="#1A1A1A" Margin="0,16,0,6"/>
+    $rows
+    <Border Background="#FFF4EC" CornerRadius="14" Padding="14,10" Margin="0,14,0,0"><StackPanel>
+     <TextBlock Text="$(& $E2 $line1)" FontSize="14.5" FontWeight="SemiBold" Foreground="#1A1A1A" TextWrapping="Wrap"/>
+     <TextBlock Text="$(& $E2 $line2)" FontSize="14" Foreground="#C2410C" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel></Border>
+   </StackPanel>
+  </Border>
+  <Border x:Name="WX" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-9,-9,0" Width="28" Height="28" CornerRadius="14" Background="White" BorderBrush="#E4DED6" BorderThickness="1" Cursor="Hand">
+   <Border.Effect><DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.25"/></Border.Effect>
+   <TextBlock Text="&#x2715;" FontSize="12" FontWeight="Bold" Foreground="#8A8178" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+  </Border>
+ </Grid>
+</Window>
+"@
+  $script:win = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader $sx))
+  if ($L.rtl) { $win.FlowDirection = 'RightToLeft' }
+  $win.FindName('WX').Add_MouseLeftButtonUp({ $win.Close() })
+  $win.FindName('Hdr').Add_MouseLeftButtonDown({ $win.DragMove() })
+  if ($Snap) { $t = New-Object System.Windows.Threading.DispatcherTimer -Property @{ Interval = [TimeSpan]::FromSeconds(1) }
+               $t.Add_Tick({ $t.Stop(); Save-Frame 0; $win.Close() }); $t.Start() }
+  $win.ShowDialog() | Out-Null
+  return
+}
+
+
 # ============ GALLERY (character picker) ============
 if ($Gallery) {
   $L = $I.($st.lang)
@@ -964,7 +1053,7 @@ function Start-Confetti {
 # --- finishing an exercise (Done): green success row, cheer, maybe confetti, then close ---
 function Complete-Exercise {
   if ($script:doneShown) { return }
-  if (-not $Demo) { Save-State -AddDone }   # previews don't count
+  if (-not $Demo) { Save-State -AddDone -Hit $exCat }   # counts toward today's progress (previews don't count)
   $script:doneShown = $true; Set-Lang $st.lang
   $Actions.Visibility = 'Collapsed'; $Success.Visibility = 'Visible'
   $Bar.Fill = '#2EA44F'; $Bar.Width = $Card.ActualWidth

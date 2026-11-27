@@ -39,10 +39,18 @@ No admin rights needed. It installs for your user only, starts with Windows, and
 - Each card is about one thing only, with a matching tip (posture / water / eyes / movement).
 - Gentle sounds that match the reminder: water pouring, a soft creak for stretches, a little "level up" for
   get-up breaks, an "ahh" for eye rest.
+- **Working hours only**: by default Sun-Thu (Hebrew) or Mon-Fri (English), 9:00-18:00. Change it, or choose "Any time".
+- **Nothing piles up while you're away**: after 10 minutes without mouse or keyboard, reminders wait for you,
+  and two reminders never stack on top of each other.
+- **Pause** with one click: 30 minutes, 1 hour, 2 hours or until tomorrow.
+- **Updates**: it checks for a newer version, lets you know, and updates in one click.
+- **My progress**: today's totals and a 7-day table compared with the week before.
 - **Drag** the popup to any screen; it remembers the spot.
 - **Hebrew and English** (right-to-left supported).
 
 ![Celebration](docs/celebrate.png)
+
+![My progress (sample data)](docs/progress.png)
 
 ![Poses](docs/poses.png)
 
@@ -51,7 +59,11 @@ No admin rights needed. It installs for your user only, starts with Windows, and
 | Setting | Options |
 |---|---|
 | Remind me now | shows a reminder immediately |
+| My progress | today's totals and a 7-day table |
 | Quick setup… | opens the welcome wizard again |
+| Working hours | any time, or days (Sun-Thu / Mon-Fri / every day) and start / end hour |
+| Pause reminders | 30 min, 1 hour, 2 hours, until tomorrow |
+| Check for updates | looks for a new version; when there is one, "Update to version…" appears at the top of the menu |
 | Character | pick one in the gallery, "rotating" within a kit, or "feeling lucky" (anyone) |
 | Language | English, עברית |
 | Reminder types | Stretches / Water / Get up & move / Eyes & breathing: each Often, Sometimes or Off |

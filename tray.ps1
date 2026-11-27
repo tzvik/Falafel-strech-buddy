@@ -20,7 +20,7 @@ function Get-State { try { Get-Content $state -Raw -ErrorAction Stop | ConvertFr
 function Set-State($changes) {    # same merge-write as the popup, so neither clobbers the other
   $cur = @{}; (Get-State).psobject.Properties | ForEach-Object { $cur[$_.Name] = $_.Value }
   foreach ($k in $changes.Keys) { $cur[$k] = $changes[$k] }
-  $cur | ConvertTo-Json | Set-Content $state -Encoding utf8
+  $cur | ConvertTo-Json -Depth 6 | Set-Content $state -Encoding utf8   # depth 6: keeps the progress history intact
 }
 function Get-L { $s = Get-State; $code = if ($s.lang -and $I.($s.lang)) { $s.lang } else { 'he' }; $I.$code }   # default Hebrew
 # Default ~30 min: move every 30-60 min of sitting, drink a glass every 60-90 min.
@@ -29,6 +29,46 @@ function Get-Every { $e = [int](Get-State).every; if ($e -gt 0) { $e } else { 30
 # Gentle randomness: each gap is the chosen interval +/- 15%, so it doesn't feel like a metronome.
 function Get-NextTime { (Get-Date).AddMinutes((Get-Every) * (0.85 + (Get-Random -Maximum 1000) / 3333)) }
 function Get-PausedUntil { $p = (Get-State).pausedUntil; if ($p) { [datetime]$p } else { [datetime]::MinValue } }
+
+# Working hours (default: workdays 9:00-18:00; Sun-Thu in Hebrew, Mon-Fri otherwise). "on = false" = any time.
+function Get-Hours { $s = Get-State; $h = $s.hours
+  @{ on = if ($h -and $null -ne $h.on) { [bool]$h.on } else { $true }
+     start = if ($h -and $h.start) { [int]$h.start } else { 9 }
+     end = if ($h -and $h.end) { [int]$h.end } else { 18 }
+     days = if ($h -and $h.days) { "$($h.days)" } elseif ($s.lang -eq 'en') { 'mon-fri' } else { 'sun-thu' } } }
+function Set-Hours($k, $v) { $h = Get-Hours; $h[$k] = $v; Set-State @{ hours = $h } }
+function Test-InHours { $h = Get-Hours; if (-not $h.on) { return $true }
+  $now = Get-Date; $dow = [int]$now.DayOfWeek   # Sunday = 0
+  $dayOk = switch ($h.days) { 'sun-thu' { $dow -le 4 } 'mon-fri' { $dow -ge 1 -and $dow -le 5 } default { $true } }
+  $dayOk -and $now.Hour -ge $h.start -and $now.Hour -lt $h.end }
+
+# Away detection: no mouse / keyboard for 10 minutes -> hold reminders (nothing piles up overnight)
+Add-Type -Namespace SB -Name Idle -MemberDefinition @'
+[StructLayout(LayoutKind.Sequential)] public struct LASTINPUTINFO { public uint cbSize; public uint dwTime; }
+[DllImport("user32.dll")] static extern bool GetLastInputInfo(ref LASTINPUTINFO p);
+public static double Minutes() { var i = new LASTINPUTINFO(); i.cbSize = (uint)Marshal.SizeOf(i); GetLastInputInfo(ref i);
+  return ((uint)Environment.TickCount - i.dwTime) / 60000.0; }
+'@
+
+# Updates: compare VERSION with the latest GitHub release; offer a one-click install of the new installer
+$version = try { (Get-Content (Join-Path $dir 'VERSION') -ErrorAction Stop | Select-Object -First 1).Trim() } catch { '0.0.0' }
+$script:upd = $null; $script:lastCheck = [datetime]::MinValue
+function Check-Update($manual) {
+  $L = Get-L; $script:lastCheck = Get-Date
+  try {   # ponytail: runs on the UI thread with a 6 s timeout, twice a day at most
+    $r = Invoke-RestMethod 'https://api.github.com/repos/tzvik/Falafel-strech-buddy/releases/latest' -TimeoutSec 6 -Headers @{ 'User-Agent' = 'StretchBuddy' }
+    $latest = "$($r.tag_name)".TrimStart('v'); $asset = @($r.assets | ? { $_.name -like '*.exe' })[0]
+    if ($asset -and [version]$latest -gt [version]$version) {
+      if (-not $script:upd -or $script:upd.v -ne $latest) { $ni.ShowBalloonTip(6000, 'Stretch Buddy', ($L.ui.updBalloon -f $latest), 'Info') }
+      $script:upd = @{ v = $latest; url = $asset.browser_download_url }; Write-Log "update available: $latest"
+    } elseif ($manual) { $ni.ShowBalloonTip(4000, 'Stretch Buddy', ($L.ui.upToDate -f $version), 'Info') }
+  } catch { Write-Log "update check failed: $($_.Exception.Message)"; if ($manual) { $ni.ShowBalloonTip(4000, 'Stretch Buddy', $L.ui.updFail, 'Warning') } } }
+function Install-Update {   # the installer only ever comes from this project's GitHub release, over HTTPS
+  $L = Get-L; $ni.ShowBalloonTip(3000, 'Stretch Buddy', $L.ui.updDownloading, 'Info')
+  try { $out = Join-Path $env:TEMP 'StretchBuddy-Setup.exe'
+        Invoke-WebRequest $script:upd.url -OutFile $out -UseBasicParsing -TimeoutSec 120
+        Write-Log "installing update $($script:upd.v)"; Start-Process $out }   # setup stops this tray and starts the new one
+  catch { Write-Log "update download failed: $($_.Exception.Message)"; $ni.ShowBalloonTip(4000, 'Stretch Buddy', $L.ui.updFail, 'Warning') } }
 
 # tray icon: a tiny shawarma (laffa wrap, fillings on top, paper wrapper), drawn at runtime - no image file needed
 $bmp = New-Object System.Drawing.Bitmap 32, 32
@@ -84,9 +124,12 @@ function Add-Pack {
   } catch { if ($zip) { $zip.Dispose() }; [System.Windows.Forms.MessageBox]::Show("$($L.ui.packBad)`n$($_.Exception.Message)") | Out-Null }
 }
 function Show-Setup { Start-Process wscript.exe -ArgumentList "`"$dir\launch.vbs`" rigatoni.ps1 -Setup" }
+function Show-Stats { Start-Process wscript.exe -ArgumentList "`"$dir\launch.vbs`" rigatoni.ps1 -Stats" }
 function Show-Gallery  { Start-Process wscript.exe -ArgumentList "`"$dir\launch.vbs`" rigatoni.ps1 -Gallery" }
 function Update-Tip { $L = Get-L
   $ni.Text = if ((Get-PausedUntil) -gt (Get-Date)) { $L.ui.tipPaused }
+             elseif (-not (Test-InHours)) { $L.ui.tipOff }
+             elseif ([SB.Idle]::Minutes() -ge 10) { $L.ui.tipAway }
              else { $L.ui.tipNext -f [math]::Max(0, [math]::Ceiling(($script:next - (Get-Date)).TotalMinutes)) } }
 
 # menu is rebuilt every time it opens, so it always shows current settings + language
@@ -101,7 +144,11 @@ function Add-Item($parent, $text, $tag, $checked, $onClick) {
 $menu.Add_Opening({
   $s = Get-State; $L = Get-L; $menu.Items.Clear()
   $menu.RightToLeft = if ($L.rtl) { 'Yes' } else { 'No' }
+  if ($script:upd) {   # new version available: first thing in the menu
+    $it = Add-Item $menu ($L.ui.updAvail -f $script:upd.v) $null $false { Install-Update }; $it.Font = New-Object System.Drawing.Font($it.Font, [System.Drawing.FontStyle]::Bold)
+    [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) }
   Add-Item $menu $L.ui.remindNow $null $false { Show-Reminder; Update-Tip } | Out-Null
+  Add-Item $menu $L.ui.progress $null $false { Show-Stats } | Out-Null
   Add-Item $menu $L.ui.setupAgain $null $false { Show-Setup } | Out-Null
   [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
 
@@ -149,13 +196,29 @@ $menu.Add_Opening({
       $script:next = Get-NextTime; Update-Tip } | Out-Null
   }
 
+  # working hours: any time, or which days + from/to hour
+  $wh = Add-Item $menu $L.ui.hours $null $false $null; $h = Get-Hours
+  Add-Item $wh $L.ui.hoursAny 'any' (-not $h.on) { Set-Hours 'on' $false; Update-Tip } | Out-Null
+  [void]$wh.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripSeparator))
+  foreach ($d in @('sun-thu', 'daysSunThu'), @('mon-fri', 'daysMonFri'), @('all', 'daysAll')) {
+    Add-Item $wh $L.ui.($d[1]) $d[0] ($h.on -and $h.days -eq $d[0]) { param($o) Set-Hours 'on' $true; Set-Hours 'days' $o.Tag; Update-Tip } | Out-Null }
+  $hs = Add-Item $wh ($L.ui.hStart -f $h.start) $null $false $null
+  foreach ($v in 7, 8, 9, 10, 11) { Add-Item $hs ("{0}:00" -f $v) $v ($h.start -eq $v) { param($o) Set-Hours 'start' $o.Tag; Update-Tip } | Out-Null }
+  $he = Add-Item $wh ($L.ui.hEnd -f $h.end) $null $false $null
+  foreach ($v in 16, 17, 18, 19, 20, 22) { Add-Item $he ("{0}:00" -f $v) $v ($h.end -eq $v) { param($o) Set-Hours 'end' $o.Tag; Update-Tip } | Out-Null }
+
+  # pause: for a while, or until tomorrow; resume when paused
   if ((Get-PausedUntil) -gt (Get-Date)) {
     Add-Item $menu $L.ui.resume $null $false { Set-State @{ pausedUntil = $null }; $script:next = Get-NextTime; Update-Tip } | Out-Null
   } else {
-    Add-Item $menu $L.ui.pause $null $false { Set-State @{ pausedUntil = (Get-Date).AddHours(1).ToString('o') }; Update-Tip } | Out-Null
+    $pm = Add-Item $menu $L.ui.pauseMenu $null $false $null
+    foreach ($p in @(30, 'p30'), @(60, 'p60'), @(120, 'p120')) {
+      Add-Item $pm $L.ui.($p[1]) $p[0] $false { param($o) Set-State @{ pausedUntil = (Get-Date).AddMinutes([int]$o.Tag).ToString('o') }; Update-Tip } | Out-Null }
+    Add-Item $pm $L.ui.pTomorrow $null $false { Set-State @{ pausedUntil = (Get-Date).Date.AddDays(1).AddHours((Get-Hours).start).ToString('o') }; Update-Tip } | Out-Null
   }
   Add-Item $menu $L.ui.mute $null ([bool]$s.mute) { Set-State @{ mute = -not [bool](Get-State).mute } } | Out-Null
   Add-Item $menu $L.ui.resetPos $null $false { Set-State @{ right = $null; bottom = $null } } | Out-Null
+  Add-Item $menu ("{0} (v{1})" -f $L.ui.checkUpd, $version) $null $false { Check-Update $true } | Out-Null
   [void]$menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator))
   Add-Item $menu $L.ui.exit $null $false { $ni.Visible = $false; [System.Windows.Forms.Application]::Exit() } | Out-Null
 })
@@ -169,7 +232,10 @@ $timer.Add_Tick({
   try {
     $now = Get-Date
     if ((Get-PausedUntil) -gt $now) { $script:next = (Get-PausedUntil).AddMinutes((Get-Every) * 0.5) }
+    elseif (-not (Test-InHours) -or [SB.Idle]::Minutes() -ge 10) {
+      if ($script:next -lt $now.AddMinutes(5)) { $script:next = $now.AddMinutes(5) } }   # outside hours / away: hold; ~5 min after you're back
     elseif ($now -ge $script:next) { Write-Log 'reminder shown'; Show-Reminder }
+    if (($now - $script:lastCheck).TotalHours -ge 12) { Check-Update $false }          # update check twice a day
     Update-Tip
   } catch { Write-Log "ERROR in timer: $($_.Exception.Message)" }
 })
